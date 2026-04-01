@@ -1,8 +1,0 @@
-org.role.samples_button.core.database-pngs-0 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\build\generated\res\pngs\release
-org.role.samples_button.core.database-updated_navigation_xml-1 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\build\generated\updated_navigation_xml\release
-org.role.samples_button.core.database-mergeReleaseResources-2 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
-org.role.samples_button.core.database-mergeReleaseResources-3 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
-org.role.samples_button.core.database-release-4 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\build\intermediates\merged_res\release\mergeReleaseResources
-org.role.samples_button.core.database-release-5 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\build\intermediates\packaged_res\release\packageReleaseResources
-org.role.samples_button.core.database-main-6 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\src\main\res
-org.role.samples_button.core.database-release-7 C:\Users\ivan.muerte\AndroidStudioProjects\samplesbutton\core\database\src\release\res
