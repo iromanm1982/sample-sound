@@ -24,4 +24,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "samples-button"
 include(":app")
- 
+include(":core:model")
+include(":core:database")
+include(":core:audio")
+include(":core:data")
+include(":core:ui")
+include(":core:designsystem")
