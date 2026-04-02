@@ -14,6 +14,7 @@ import org.role.samples_button.core.model.SoundButton
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Singleton
 class GroupRepositoryImpl @Inject constructor(
     private val groupDao: GroupDao,
