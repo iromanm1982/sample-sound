@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.role.samples_button.core.database.AppDatabase
 import org.role.samples_button.core.database.GroupDao
+import org.role.samples_button.core.database.SoundButtonDao
 import javax.inject.Singleton
 
 @Module
@@ -22,4 +23,7 @@ object DatabaseModule {
 
     @Provides
     fun provideGroupDao(db: AppDatabase): GroupDao = db.groupDao()
+
+    @Provides
+    fun provideSoundButtonDao(db: AppDatabase): SoundButtonDao = db.soundButtonDao()
 }
