@@ -3,21 +3,47 @@ package org.role.samples_button
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import org.role.samples_button.core.designsystem.SamplesButtonTheme
+import org.role.samples_button.feature.browser.impl.FileBrowserScreen
 import org.role.samples_button.feature.soundboard.impl.SoundBoardScreen
 import org.role.samples_button.feature.soundboard.impl.SoundBoardViewModel
 
 @AndroidEntryPoint(ComponentActivity::class)
 class MainActivity : Hilt_MainActivity() {
-    private val viewModel: SoundBoardViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             SamplesButtonTheme {
-                SoundBoardScreen(viewModel = viewModel)
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "soundboard") {
+                    composable("soundboard") {
+                        val viewModel: SoundBoardViewModel =
+                            androidx.hilt.navigation.compose.hiltViewModel()
+                        SoundBoardScreen(
+                            viewModel = viewModel,
+                            onNavigateToFileBrowser = { groupId ->
+                                navController.navigate("file_browser/$groupId")
+                            }
+                        )
+                    }
+                    composable(
+                        route = "file_browser/{groupId}",
+                        arguments = listOf(navArgument("groupId") { type = NavType.LongType })
+                    ) { backStackEntry ->
+                        val groupId = backStackEntry.arguments!!.getLong("groupId")
+                        FileBrowserScreen(
+                            groupId = groupId,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                }
             }
         }
     }
