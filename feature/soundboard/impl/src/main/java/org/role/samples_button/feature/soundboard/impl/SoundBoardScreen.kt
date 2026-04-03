@@ -67,6 +67,7 @@ fun SoundBoardScreen(
                 groups = groups,
                 onDelete = { viewModel.deleteGroup(it) },
                 onAddSound = { groupId -> onNavigateToFileBrowser(groupId) },
+                onPlaySound = { filePath -> viewModel.playSound(filePath) },
                 modifier = Modifier.padding(padding)
             )
         }
@@ -101,6 +102,7 @@ private fun GroupList(
     groups: List<Group>,
     onDelete: (Long) -> Unit,
     onAddSound: (Long) -> Unit,
+    onPlaySound: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
@@ -108,7 +110,8 @@ private fun GroupList(
             GroupCard(
                 group = group,
                 onDelete = { onDelete(group.id) },
-                onAddSound = { onAddSound(group.id) }
+                onAddSound = { onAddSound(group.id) },
+                onPlaySound = onPlaySound
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -119,7 +122,8 @@ private fun GroupList(
 private fun GroupCard(
     group: Group,
     onDelete: () -> Unit,
-    onAddSound: () -> Unit
+    onAddSound: () -> Unit,
+    onPlaySound: (String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -134,7 +138,11 @@ private fun GroupCard(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            ButtonGrid(buttons = group.buttons, onAddSound = onAddSound)
+            ButtonGrid(
+                buttons = group.buttons,
+                onAddSound = onAddSound,
+                onPlaySound = onPlaySound
+            )
         }
     }
 }
@@ -142,7 +150,8 @@ private fun GroupCard(
 @Composable
 private fun ButtonGrid(
     buttons: List<SoundButton>,
-    onAddSound: () -> Unit
+    onAddSound: () -> Unit,
+    onPlaySound: (String) -> Unit
 ) {
     val allItems: List<SoundButton?> = buttons + listOf(null)
     allItems.chunked(3).forEach { row ->
@@ -152,7 +161,11 @@ private fun ButtonGrid(
         ) {
             row.forEach { button ->
                 if (button != null) {
-                    SoundButtonItem(button = button, modifier = Modifier.weight(1f))
+                    SoundButtonItem(
+                        button = button,
+                        onClick = { onPlaySound(button.filePath) },
+                        modifier = Modifier.weight(1f)
+                    )
                 } else {
                     AddSoundButton(onClick = onAddSound, modifier = Modifier.weight(1f))
                 }
@@ -166,8 +179,13 @@ private fun ButtonGrid(
 }
 
 @Composable
-private fun SoundButtonItem(button: SoundButton, modifier: Modifier = Modifier) {
+private fun SoundButtonItem(
+    button: SoundButton,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
+        onClick = onClick,
         modifier = modifier.height(64.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {

@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.material)
     implementation(project(":feature:soundboard:impl"))
     implementation(project(":feature:browser:impl"))
+    implementation(project(":core:audio"))
     implementation(project(":core:data"))
     implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
