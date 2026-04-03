@@ -9,7 +9,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SoundPoolManager @Inject constructor(
-    @ApplicationContext context: Context
+    @Suppress("UnusedParameter") @ApplicationContext context: Context
 ) : SoundPoolPlayer {
 
     private val soundPool = SoundPool.Builder()
@@ -21,14 +21,19 @@ class SoundPoolManager @Inject constructor(
                 .build()
         ).build()
 
-    private val soundIds = mutableMapOf<String, Int>()
-    private val pendingPlay = mutableSetOf<String>()
+    private val lock = Any()
+    private val soundIds = mutableMapOf<String, Int>()       // filePath → soundId
+    private val soundIdToPath = mutableMapOf<Int, String>()  // soundId → filePath (reverse map)
+    private val pendingPlay = mutableSetOf<String>()         // waiting for OnLoadComplete
 
     init {
         soundPool.setOnLoadCompleteListener { _, soundId, status ->
             if (status == 0) {
-                val path = soundIds.entries.find { it.value == soundId }?.key
-                if (path != null && pendingPlay.remove(path)) {
+                val shouldPlay = synchronized(lock) {
+                    val path = soundIdToPath[soundId]
+                    if (path != null) pendingPlay.remove(path) else false
+                }
+                if (shouldPlay) {
                     soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
                 }
             }
@@ -36,18 +41,28 @@ class SoundPoolManager @Inject constructor(
     }
 
     override fun play(filePath: String) {
-        val existing = soundIds[filePath]
-        if (existing != null) {
-            soundPool.play(existing, 1f, 1f, 1, 0, 1f)
-        } else {
-            pendingPlay.add(filePath)
-            soundIds[filePath] = soundPool.load(filePath, 1)
+        synchronized(lock) {
+            val existing = soundIds[filePath]
+            if (existing != null) {
+                soundPool.play(existing, 1f, 1f, 1, 0, 1f)
+            } else {
+                val soundId = soundPool.load(filePath, 1)
+                if (soundId > 0) {
+                    pendingPlay.add(filePath)
+                    soundIds[filePath] = soundId
+                    soundIdToPath[soundId] = filePath
+                }
+                // if soundId <= 0: load() failed — silently skip (file may be missing/corrupt)
+            }
         }
     }
 
     override fun release() {
+        synchronized(lock) {
+            soundIds.clear()
+            soundIdToPath.clear()
+            pendingPlay.clear()
+        }
         soundPool.release()
-        soundIds.clear()
-        pendingPlay.clear()
     }
 }
