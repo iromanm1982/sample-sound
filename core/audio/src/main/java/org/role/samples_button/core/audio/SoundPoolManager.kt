@@ -4,10 +4,10 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.android.scopes.ActivityRetainedScoped
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
+@ActivityRetainedScoped
 class SoundPoolManager @Inject constructor(
     @Suppress("UnusedParameter") @ApplicationContext context: Context
 ) : SoundPoolPlayer {
@@ -22,9 +22,9 @@ class SoundPoolManager @Inject constructor(
         ).build()
 
     private val lock = Any()
-    private val soundIds = mutableMapOf<String, Int>()       // filePath → soundId
-    private val soundIdToPath = mutableMapOf<Int, String>()  // soundId → filePath (reverse map)
-    private val pendingPlay = mutableSetOf<String>()         // waiting for OnLoadComplete
+    private val soundIds = mutableMapOf<String, Int>()
+    private val soundIdToPath = mutableMapOf<Int, String>()
+    private val pendingPlay = mutableSetOf<String>()
 
     init {
         soundPool.setOnLoadCompleteListener { _, soundId, status ->
@@ -52,7 +52,6 @@ class SoundPoolManager @Inject constructor(
                     soundIds[filePath] = soundId
                     soundIdToPath[soundId] = filePath
                 }
-                // if soundId <= 0: load() failed — silently skip (file may be missing/corrupt)
             }
         }
     }

@@ -34,7 +34,7 @@ class SoundBoardViewModel @Inject constructor(
         soundPoolPlayer.play(filePath)
     }
 
-    public override fun onCleared() {
+    override fun onCleared() {
         soundPoolPlayer.release()
     }
 }

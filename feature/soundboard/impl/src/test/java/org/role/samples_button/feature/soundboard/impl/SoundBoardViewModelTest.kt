@@ -1,5 +1,8 @@
 package org.role.samples_button.feature.soundboard.impl
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -78,8 +81,14 @@ class SoundBoardViewModelTest {
     @Test
     fun `onCleared releases player`() = runTest {
         val player = FakeSoundPoolPlayer()
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
-        viewModel.onCleared()
+        val store = ViewModelStore()
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                SoundBoardViewModel(FakeGroupRepository(), player) as T
+        }
+        ViewModelProvider(store, factory)[SoundBoardViewModel::class.java]
+        store.clear()
         assertTrue(player.released)
     }
 }
