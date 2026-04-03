@@ -161,9 +161,10 @@ private fun ButtonGrid(
         ) {
             row.forEach { button ->
                 if (button != null) {
+                    val filePath = button.filePath
                     SoundButtonItem(
                         button = button,
-                        onClick = { onPlaySound(button.filePath) },
+                        onClick = { onPlaySound(filePath) },
                         modifier = Modifier.weight(1f)
                     )
                 } else {
