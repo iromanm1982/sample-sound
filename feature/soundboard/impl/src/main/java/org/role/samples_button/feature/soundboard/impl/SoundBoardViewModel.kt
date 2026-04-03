@@ -7,13 +7,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.role.samples_button.core.audio.SoundPoolPlayer
 import org.role.samples_button.core.data.GroupRepository
 import org.role.samples_button.core.model.Group
 import javax.inject.Inject
 
 @HiltViewModel
 class SoundBoardViewModel @Inject constructor(
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    private val soundPoolPlayer: SoundPoolPlayer
 ) : ViewModel() {
 
     val groups: StateFlow<List<Group>> = groupRepository
@@ -26,5 +28,13 @@ class SoundBoardViewModel @Inject constructor(
 
     fun deleteGroup(id: Long) {
         viewModelScope.launch { groupRepository.deleteGroup(id) }
+    }
+
+    fun playSound(filePath: String) {
+        soundPoolPlayer.play(filePath)
+    }
+
+    public override fun onCleared() {
+        soundPoolPlayer.release()
     }
 }

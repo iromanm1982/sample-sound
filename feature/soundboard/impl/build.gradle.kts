@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":feature:soundboard:api"))
     implementation(project(":core:data"))
     implementation(project(":core:model"))
+    implementation(project(":core:audio"))
     implementation(project(":core:designsystem"))
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
