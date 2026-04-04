@@ -36,7 +36,9 @@
       "Bash(./gradlew :core:audio:assembleDebug :feature:soundboard:impl:testDebugUnitTest)",
       "Bash(./gradlew :core:audio:compileDebugKotlin)",
       "Bash(/c/Users/ivan.muerte/AppData/Local/Android/Sdk/platform-tools/adb.exe devices:*)",
-      "Bash(cmd.exe /c \"gradlew.bat assembleDebug\")"
+      "Bash(cmd.exe /c \"gradlew.bat assembleDebug\")",
+      "Bash(powershell.exe:*)",
+      "Bash(n*.keystore'\")"
     ]
   }
 }
