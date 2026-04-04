@@ -62,10 +62,9 @@ class SoundPoolManager @Inject constructor(
 
     override fun pause(filePath: String) {
         synchronized(lock) {
-            activePlayers[filePath] ?: return
+            val player = activePlayers[filePath] ?: return
             // Mark as pending so OnPreparedListener won't start if still preparing
             pendingPause.add(filePath)
-            val player = activePlayers[filePath]!!
             if (safeIsPlaying(player)) {
                 try { player.pause() } catch (_: Exception) {}
             }
