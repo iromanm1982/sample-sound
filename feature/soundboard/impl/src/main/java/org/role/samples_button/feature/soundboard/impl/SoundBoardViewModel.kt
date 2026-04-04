@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.role.samples_button.core.audio.SoundPoolPlayer
 import org.role.samples_button.core.data.GroupRepository
@@ -37,12 +38,12 @@ class SoundBoardViewModel @Inject constructor(
 
     fun playSound(filePath: String) {
         soundPoolPlayer.play(filePath)
-        _playingPaths.value = _playingPaths.value + filePath
+        _playingPaths.update { it + filePath }
     }
 
     fun pauseSound(filePath: String) {
         soundPoolPlayer.pause(filePath)
-        _playingPaths.value = _playingPaths.value - filePath
+        _playingPaths.update { it - filePath }
     }
 
     fun pauseAll() {
