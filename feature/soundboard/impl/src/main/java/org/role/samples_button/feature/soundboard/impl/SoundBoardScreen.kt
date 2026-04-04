@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -50,10 +52,22 @@ fun SoundBoardScreen(
     onNavigateToFileBrowser: (Long) -> Unit = {}
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
+    val playingPaths by viewModel.playingPaths.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("SoundBoard") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("SoundBoard") },
+                actions = {
+                    if (playingPaths.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.pauseAll() }) {
+                            Icon(Icons.Default.Pause, contentDescription = "Pausar todo")
+                        }
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Crear grupo")
@@ -65,9 +79,13 @@ fun SoundBoardScreen(
         } else {
             GroupList(
                 groups = groups,
+                playingPaths = playingPaths,
                 onDelete = { viewModel.deleteGroup(it) },
                 onAddSound = { groupId -> onNavigateToFileBrowser(groupId) },
-                onPlaySound = { filePath -> viewModel.playSound(filePath) },
+                onSoundButtonClick = { filePath ->
+                    if (filePath in playingPaths) viewModel.pauseSound(filePath)
+                    else viewModel.playSound(filePath)
+                },
                 modifier = Modifier.padding(padding)
             )
         }
@@ -100,18 +118,20 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 @Composable
 private fun GroupList(
     groups: List<Group>,
+    playingPaths: Set<String>,
     onDelete: (Long) -> Unit,
     onAddSound: (Long) -> Unit,
-    onPlaySound: (String) -> Unit,
+    onSoundButtonClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         items(groups, key = { it.id }) { group ->
             GroupCard(
                 group = group,
+                playingPaths = playingPaths,
                 onDelete = { onDelete(group.id) },
                 onAddSound = { onAddSound(group.id) },
-                onPlaySound = onPlaySound
+                onSoundButtonClick = onSoundButtonClick
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -121,9 +141,10 @@ private fun GroupList(
 @Composable
 private fun GroupCard(
     group: Group,
+    playingPaths: Set<String>,
     onDelete: () -> Unit,
     onAddSound: () -> Unit,
-    onPlaySound: (String) -> Unit
+    onSoundButtonClick: (String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -140,8 +161,9 @@ private fun GroupCard(
             Spacer(modifier = Modifier.height(8.dp))
             ButtonGrid(
                 buttons = group.buttons,
+                playingPaths = playingPaths,
                 onAddSound = onAddSound,
-                onPlaySound = onPlaySound
+                onSoundButtonClick = onSoundButtonClick
             )
         }
     }
@@ -150,8 +172,9 @@ private fun GroupCard(
 @Composable
 private fun ButtonGrid(
     buttons: List<SoundButton>,
+    playingPaths: Set<String>,
     onAddSound: () -> Unit,
-    onPlaySound: (String) -> Unit
+    onSoundButtonClick: (String) -> Unit
 ) {
     val allItems: List<SoundButton?> = buttons + listOf(null)
     allItems.chunked(3).forEach { row ->
@@ -164,7 +187,8 @@ private fun ButtonGrid(
                     val filePath = button.filePath
                     SoundButtonItem(
                         button = button,
-                        onClick = { onPlaySound(filePath) },
+                        isPlaying = filePath in playingPaths,
+                        onClick = { onSoundButtonClick(filePath) },
                         modifier = Modifier.weight(1f)
                     )
                 } else {
@@ -182,23 +206,41 @@ private fun ButtonGrid(
 @Composable
 private fun SoundButtonItem(
     button: SoundButton,
+    isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
         modifier = modifier.height(64.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isPlaying)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.secondaryContainer
+        )
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Text(
                 text = button.label,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(4.dp)
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(4.dp)
             )
+            if (isPlaying) {
+                Icon(
+                    imageVector = Icons.Default.Pause,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(12.dp)
+                )
+            }
         }
     }
 }
