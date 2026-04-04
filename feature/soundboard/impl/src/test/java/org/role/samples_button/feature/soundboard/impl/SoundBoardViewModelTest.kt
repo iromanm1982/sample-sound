@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -90,6 +91,46 @@ class SoundBoardViewModelTest {
         ViewModelProvider(store, factory)[SoundBoardViewModel::class.java]
         store.clear()
         assertTrue(player.released)
+    }
+
+    @Test
+    fun `playSound adds filePath to playingPaths`() = runTest {
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        viewModel.playSound("/storage/kick.mp3")
+        assertTrue(viewModel.playingPaths.value.contains("/storage/kick.mp3"))
+    }
+
+    @Test
+    fun `pauseSound removes filePath from playingPaths`() = runTest {
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        viewModel.playSound("/storage/kick.mp3")
+        viewModel.pauseSound("/storage/kick.mp3")
+        assertFalse(viewModel.playingPaths.value.contains("/storage/kick.mp3"))
+    }
+
+    @Test
+    fun `pauseAll clears playingPaths`() = runTest {
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        viewModel.playSound("/storage/kick.mp3")
+        viewModel.playSound("/storage/snare.mp3")
+        viewModel.pauseAll()
+        assertTrue(viewModel.playingPaths.value.isEmpty())
+    }
+
+    @Test
+    fun `pauseSound delegates to player`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
+        viewModel.pauseSound("/storage/kick.mp3")
+        assertEquals(listOf("/storage/kick.mp3"), player.pausedPaths)
+    }
+
+    @Test
+    fun `pauseAll delegates to player`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
+        viewModel.pauseAll()
+        assertTrue(player.pauseAllCalled)
     }
 }
 
