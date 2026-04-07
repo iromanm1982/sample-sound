@@ -1,17 +1,41 @@
+# Keystores
 *.jks
+*.keystore
+
+# Android / Gradle
 *.iml
-.gradle
+.gradle/
 /local.properties
-/.idea/caches
-/.idea/libraries
+local.properties
+/build
+**/build/
+/captures
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+
+# IntelliJ / Android Studio
+/.idea/caches/
+/.idea/libraries/
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetDropDown.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/.gitignore
+*.iws
+
+# Lint
+lint/
+*.lint.xml
+
+# OS
 .DS_Store
-/build
-**/build/
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+Thumbs.db
+
+# Claude Code
+.claude/settings.local.json
+.claude/__pycache__/
