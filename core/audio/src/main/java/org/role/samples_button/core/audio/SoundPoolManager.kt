@@ -19,33 +19,81 @@ class SoundPoolManager @Inject constructor(
         .build()
 
     private val lock = Any()
-    private val players = mutableListOf<MediaPlayer>()
+    // LinkedHashMap preserves insertion order — oldest entry is evicted when pool is full
+    private val activePlayers = LinkedHashMap<String, MediaPlayer>()
+    // Paths that should not start playing when prepareAsync completes
+    private val pendingPause = mutableSetOf<String>()
 
     override fun play(filePath: String) {
-        val player = synchronized(lock) { acquirePlayer() }
-        try {
-            player.reset()
-            player.setAudioAttributes(audioAttributes)
-            player.setDataSource(filePath)
-            player.setOnPreparedListener { it.start() }
-            player.setOnErrorListener { _, _, _ -> true }
-            player.prepareAsync()
-        } catch (e: Exception) {
-            try { player.reset() } catch (_: Exception) {}
+        synchronized(lock) {
+            val existing = activePlayers[filePath]
+            if (existing != null) {
+                // Cancel any pending pause request for this path
+                pendingPause.remove(filePath)
+                // Refresh LRU position so a just-resumed player isn't evicted immediately
+                activePlayers.remove(filePath)
+                activePlayers[filePath] = existing
+                if (!safeIsPlaying(existing)) {
+                    try { existing.start() } catch (_: Exception) {}
+                }
+                return
+            }
+            val player = acquirePlayer(filePath)
+            try {
+                player.reset() // reset() clears any previously set listeners
+                player.setAudioAttributes(audioAttributes)
+                player.setDataSource(filePath)
+                player.setOnPreparedListener { mp ->
+                    // Check pendingPause under lock — pause() may have been called during preparation
+                    val shouldStart = synchronized(lock) { !pendingPause.remove(filePath) }
+                    if (shouldStart) {
+                        try { mp.start() } catch (_: Exception) {}
+                    }
+                }
+                player.setOnErrorListener { _, _, _ -> true }
+                player.prepareAsync()
+            } catch (e: Exception) {
+                try { player.reset() } catch (_: Exception) {}
+                activePlayers.remove(filePath)
+                pendingPause.remove(filePath)
+            }
         }
     }
 
-    private fun acquirePlayer(): MediaPlayer {
-        // Prefer an idle player
-        players.firstOrNull { !safeIsPlaying(it) }?.let { return it }
-        // Create new if under the limit
-        if (players.size < maxStreams) {
-            return MediaPlayer().also { players.add(it) }
+    override fun pause(filePath: String) {
+        synchronized(lock) {
+            val player = activePlayers[filePath] ?: return
+            // Mark as pending so OnPreparedListener won't start if still preparing
+            pendingPause.add(filePath)
+            if (safeIsPlaying(player)) {
+                try { player.pause() } catch (_: Exception) {}
+            }
         }
-        // Reuse the oldest player (stop it first)
-        val oldest = players.first()
-        try { oldest.stop() } catch (_: Exception) {}
-        return oldest
+    }
+
+    override fun pauseAll() {
+        synchronized(lock) {
+            activePlayers.forEach { (path, player) ->
+                pendingPause.add(path)
+                if (safeIsPlaying(player)) {
+                    try { player.pause() } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    private fun acquirePlayer(forPath: String): MediaPlayer {
+        return if (activePlayers.size < maxStreams) {
+            MediaPlayer().also { activePlayers[forPath] = it }
+        } else {
+            // Evict oldest entry and reuse its player; reset() called next clears its listeners
+            val oldestPath = activePlayers.keys.first()
+            val player = activePlayers.remove(oldestPath)!!
+            pendingPause.remove(oldestPath)
+            try { player.stop() } catch (_: Exception) {}
+            activePlayers[forPath] = player
+            player
+        }
     }
 
     private fun safeIsPlaying(player: MediaPlayer): Boolean =
@@ -53,8 +101,9 @@ class SoundPoolManager @Inject constructor(
 
     override fun release() {
         synchronized(lock) {
-            players.forEach { try { it.release() } catch (_: Exception) {} }
-            players.clear()
+            activePlayers.values.forEach { try { it.release() } catch (_: Exception) {} }
+            activePlayers.clear()
+            pendingPause.clear()
         }
     }
 }
