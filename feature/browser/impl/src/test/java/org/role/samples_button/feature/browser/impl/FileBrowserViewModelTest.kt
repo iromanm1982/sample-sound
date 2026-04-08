@@ -64,4 +64,6 @@ class FakeSoundButtonRepository : SoundButtonRepository {
     override suspend fun deleteButton(id: Long) {
         deletedIds.add(id)
     }
+
+    override suspend fun renameButton(id: Long, newLabel: String) = Unit
 }

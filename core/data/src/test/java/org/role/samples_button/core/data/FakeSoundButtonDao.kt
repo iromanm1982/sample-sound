@@ -29,4 +29,14 @@ class FakeSoundButtonDao : SoundButtonDao {
             }
         }
     }
+
+    override suspend fun updateLabel(id: Long, label: String) {
+        map.forEach { (groupId, list) ->
+            val index = list.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                list[index] = list[index].copy(label = label)
+                flowFor(groupId).value = list.toList()
+            }
+        }
+    }
 }

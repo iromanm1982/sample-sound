@@ -42,6 +42,10 @@ class SoundBoardViewModel @Inject constructor(
         viewModelScope.launch { soundButtonRepository.deleteButton(id) }
     }
 
+    fun renameButton(id: Long, newLabel: String) {
+        viewModelScope.launch { soundButtonRepository.renameButton(id, newLabel) }
+    }
+
     fun playSound(filePath: String) {
         soundPoolPlayer.play(filePath)
         _playingPaths.update { it + filePath }

@@ -15,4 +15,7 @@ interface SoundButtonDao {
 
     @Query("DELETE FROM sound_buttons WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE sound_buttons SET label = :label WHERE id = :id")
+    suspend fun updateLabel(id: Long, label: String)
 }
