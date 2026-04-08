@@ -141,6 +141,14 @@ class SoundBoardViewModelTest {
         viewModel.deleteButton(99L)
         assertEquals(listOf(99L), soundButtonRepo.deletedIds)
     }
+
+    @Test
+    fun `renameButton delegates to repository`() = runTest {
+        val soundButtonRepo = FakeSoundButtonRepository()
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), soundButtonRepo, FakeSoundPoolPlayer())
+        viewModel.renameButton(7L, "New Name")
+        assertEquals(listOf(7L to "New Name"), soundButtonRepo.renamedButtons)
+    }
 }
 
 class FakeGroupRepository : GroupRepository {
@@ -170,7 +178,8 @@ class FakeGroupRepository : GroupRepository {
 
 class FakeSoundButtonRepository : SoundButtonRepository {
     val deletedIds = mutableListOf<Long>()
+    val renamedButtons = mutableListOf<Pair<Long, String>>()
     override suspend fun addButton(label: String, filePath: String, groupId: Long) = Unit
     override suspend fun deleteButton(id: Long) { deletedIds.add(id) }
-    override suspend fun renameButton(id: Long, newLabel: String) = Unit
+    override suspend fun renameButton(id: Long, newLabel: String) { renamedButtons.add(id to newLabel) }
 }
