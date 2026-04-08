@@ -43,4 +43,15 @@ class SoundButtonRepositoryImplTest {
         repo.deleteButton(id)
         assertTrue(dao.getByGroupId(1L).first().isEmpty())
     }
+
+    @Test
+    fun `renameButton updates label in dao`() = runTest {
+        val dao = FakeSoundButtonDao()
+        val repo = SoundButtonRepositoryImpl(dao)
+        repo.addButton("Kick", "/sdcard/kick.mp3", 1L)
+        val id = dao.getByGroupId(1L).first()[0].id
+        repo.renameButton(id, "  Bass Drum  ")
+        val buttons = dao.getByGroupId(1L).first()
+        assertEquals("Bass Drum", buttons[0].label)
+    }
 }

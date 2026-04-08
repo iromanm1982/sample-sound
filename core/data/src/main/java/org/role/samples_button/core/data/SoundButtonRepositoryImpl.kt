@@ -21,4 +21,8 @@ class SoundButtonRepositoryImpl @Inject constructor(
     override suspend fun deleteButton(id: Long) {
         soundButtonDao.deleteById(id)
     }
+
+    override suspend fun renameButton(id: Long, newLabel: String) {
+        soundButtonDao.updateLabel(id, newLabel.trim())
+    }
 }

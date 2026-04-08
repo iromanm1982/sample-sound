@@ -172,4 +172,5 @@ class FakeSoundButtonRepository : SoundButtonRepository {
     val deletedIds = mutableListOf<Long>()
     override suspend fun addButton(label: String, filePath: String, groupId: Long) = Unit
     override suspend fun deleteButton(id: Long) { deletedIds.add(id) }
+    override suspend fun renameButton(id: Long, newLabel: String) = Unit
 }
