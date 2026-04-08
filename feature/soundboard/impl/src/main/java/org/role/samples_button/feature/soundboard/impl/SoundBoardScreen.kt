@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -91,6 +92,7 @@ fun SoundBoardScreen(
                     else viewModel.playSound(filePath)
                 },
                 onDeleteButton = { viewModel.deleteButton(it) },
+                onRenameButton = { id, newLabel -> viewModel.renameButton(id, newLabel) },
                 modifier = Modifier.padding(padding)
             )
         }
@@ -128,6 +130,7 @@ private fun GroupList(
     onAddSound: (Long) -> Unit,
     onSoundButtonClick: (String) -> Unit,
     onDeleteButton: (Long) -> Unit,
+    onRenameButton: (Long, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
@@ -138,7 +141,8 @@ private fun GroupList(
                 onDelete = { onDelete(group.id) },
                 onAddSound = { onAddSound(group.id) },
                 onSoundButtonClick = onSoundButtonClick,
-                onDeleteButton = onDeleteButton
+                onDeleteButton = onDeleteButton,
+                onRenameButton = onRenameButton
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -152,7 +156,8 @@ private fun GroupCard(
     onDelete: () -> Unit,
     onAddSound: () -> Unit,
     onSoundButtonClick: (String) -> Unit,
-    onDeleteButton: (Long) -> Unit
+    onDeleteButton: (Long) -> Unit,
+    onRenameButton: (Long, String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -172,7 +177,8 @@ private fun GroupCard(
                 playingPaths = playingPaths,
                 onAddSound = onAddSound,
                 onSoundButtonClick = onSoundButtonClick,
-                onDeleteButton = onDeleteButton
+                onDeleteButton = onDeleteButton,
+                onRenameButton = onRenameButton
             )
         }
     }
@@ -184,7 +190,8 @@ private fun ButtonGrid(
     playingPaths: Set<String>,
     onAddSound: () -> Unit,
     onSoundButtonClick: (String) -> Unit,
-    onDeleteButton: (Long) -> Unit
+    onDeleteButton: (Long) -> Unit,
+    onRenameButton: (Long, String) -> Unit
 ) {
     val allItems: List<SoundButton?> = buttons + listOf(null)
     allItems.chunked(3).forEach { row ->
@@ -200,6 +207,7 @@ private fun ButtonGrid(
                         isPlaying = filePath in playingPaths,
                         onClick = { onSoundButtonClick(filePath) },
                         onDelete = { onDeleteButton(button.id) },
+                        onRename = onRenameButton,
                         modifier = Modifier.weight(1f)
                     )
                 } else {
@@ -221,10 +229,12 @@ private fun SoundButtonItem(
     isPlaying: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    onRename: (Long, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.height(64.dp)) {
         Card(
@@ -270,6 +280,14 @@ private fun SoundButtonItem(
             onDismissRequest = { showMenu = false }
         ) {
             DropdownMenuItem(
+                text = { Text("Renombrar") },
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                onClick = {
+                    showMenu = false
+                    showRenameDialog = true
+                }
+            )
+            DropdownMenuItem(
                 text = { Text("Eliminar") },
                 leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                 onClick = {
@@ -296,6 +314,49 @@ private fun SoundButtonItem(
             }
         )
     }
+
+    if (showRenameDialog) {
+        RenameDialog(
+            currentLabel = button.label,
+            onConfirm = { newLabel ->
+                showRenameDialog = false
+                onRename(button.id, newLabel)
+            },
+            onDismiss = { showRenameDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun RenameDialog(
+    currentLabel: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var label by remember { mutableStateOf(currentLabel) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Renombrar sample") },
+        text = {
+            OutlinedTextField(
+                value = label,
+                onValueChange = { label = it },
+                label = { Text("Nombre") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (label.isNotBlank()) onConfirm(label.trim()) },
+                enabled = label.isNotBlank()
+            ) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }
 
 @Composable
