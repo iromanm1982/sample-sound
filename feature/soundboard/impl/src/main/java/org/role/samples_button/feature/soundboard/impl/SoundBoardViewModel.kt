@@ -12,12 +12,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.role.samples_button.core.audio.SoundPoolPlayer
 import org.role.samples_button.core.data.GroupRepository
+import org.role.samples_button.core.data.SoundButtonRepository
 import org.role.samples_button.core.model.Group
 import javax.inject.Inject
 
 @HiltViewModel
 class SoundBoardViewModel @Inject constructor(
     private val groupRepository: GroupRepository,
+    private val soundButtonRepository: SoundButtonRepository,
     private val soundPoolPlayer: SoundPoolPlayer
 ) : ViewModel() {
 
@@ -34,6 +36,10 @@ class SoundBoardViewModel @Inject constructor(
 
     fun deleteGroup(id: Long) {
         viewModelScope.launch { groupRepository.deleteGroup(id) }
+    }
+
+    fun deleteButton(id: Long) {
+        viewModelScope.launch { soundButtonRepository.deleteButton(id) }
     }
 
     fun playSound(filePath: String) {

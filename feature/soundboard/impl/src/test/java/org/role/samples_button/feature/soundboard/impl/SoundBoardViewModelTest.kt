@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.role.samples_button.core.data.GroupRepository
+import org.role.samples_button.core.data.SoundButtonRepository
 import org.role.samples_button.core.model.Group
 import org.role.samples_button.core.model.SoundButton
 
@@ -38,14 +39,14 @@ class SoundBoardViewModelTest {
 
     @Test
     fun `initial groups state is empty list`() = runTest {
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), FakeSoundPoolPlayer())
         assertEquals(emptyList<Group>(), viewModel.groups.value)
     }
 
     @Test
     fun `createGroup delegates to repository`() = runTest {
         val repo = FakeGroupRepository()
-        val viewModel = SoundBoardViewModel(repo, FakeSoundPoolPlayer())
+        val viewModel = SoundBoardViewModel(repo, FakeSoundButtonRepository(), FakeSoundPoolPlayer())
         viewModel.createGroup("Percusión")
         assertEquals(listOf("Percusión"), repo.createdGroups)
     }
@@ -53,7 +54,7 @@ class SoundBoardViewModelTest {
     @Test
     fun `deleteGroup delegates to repository`() = runTest {
         val repo = FakeGroupRepository()
-        val viewModel = SoundBoardViewModel(repo, FakeSoundPoolPlayer())
+        val viewModel = SoundBoardViewModel(repo, FakeSoundButtonRepository(), FakeSoundPoolPlayer())
         viewModel.deleteGroup(42L)
         assertEquals(listOf(42L), repo.deletedIds)
     }
@@ -61,7 +62,7 @@ class SoundBoardViewModelTest {
     @Test
     fun `playSound delegates filePath to player`() = runTest {
         val player = FakeSoundPoolPlayer()
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), player)
         viewModel.playSound("/storage/emulated/0/Music/kick.mp3")
         assertEquals(listOf("/storage/emulated/0/Music/kick.mp3"), player.playedPaths)
     }
@@ -69,7 +70,7 @@ class SoundBoardViewModelTest {
     @Test
     fun `playSound multiple times plays all paths`() = runTest {
         val player = FakeSoundPoolPlayer()
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), player)
         viewModel.playSound("/storage/a.mp3")
         viewModel.playSound("/storage/b.mp3")
         viewModel.playSound("/storage/a.mp3")
@@ -86,7 +87,7 @@ class SoundBoardViewModelTest {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                SoundBoardViewModel(FakeGroupRepository(), player) as T
+                SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), player) as T
         }
         ViewModelProvider(store, factory)[SoundBoardViewModel::class.java]
         store.clear()
@@ -95,14 +96,14 @@ class SoundBoardViewModelTest {
 
     @Test
     fun `playSound adds filePath to playingPaths`() = runTest {
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), FakeSoundPoolPlayer())
         viewModel.playSound("/storage/kick.mp3")
         assertTrue(viewModel.playingPaths.value.contains("/storage/kick.mp3"))
     }
 
     @Test
     fun `pauseSound removes filePath from playingPaths`() = runTest {
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), FakeSoundPoolPlayer())
         viewModel.playSound("/storage/kick.mp3")
         viewModel.pauseSound("/storage/kick.mp3")
         assertFalse(viewModel.playingPaths.value.contains("/storage/kick.mp3"))
@@ -110,7 +111,7 @@ class SoundBoardViewModelTest {
 
     @Test
     fun `pauseAll clears playingPaths`() = runTest {
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundPoolPlayer())
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), FakeSoundPoolPlayer())
         viewModel.playSound("/storage/kick.mp3")
         viewModel.playSound("/storage/snare.mp3")
         viewModel.pauseAll()
@@ -120,7 +121,7 @@ class SoundBoardViewModelTest {
     @Test
     fun `pauseSound delegates to player`() = runTest {
         val player = FakeSoundPoolPlayer()
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), player)
         viewModel.pauseSound("/storage/kick.mp3")
         assertEquals(listOf("/storage/kick.mp3"), player.pausedPaths)
     }
@@ -128,9 +129,17 @@ class SoundBoardViewModelTest {
     @Test
     fun `pauseAll delegates to player`() = runTest {
         val player = FakeSoundPoolPlayer()
-        val viewModel = SoundBoardViewModel(FakeGroupRepository(), player)
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), FakeSoundButtonRepository(), player)
         viewModel.pauseAll()
         assertTrue(player.pauseAllCalled)
+    }
+
+    @Test
+    fun `deleteButton delegates to repository`() = runTest {
+        val soundButtonRepo = FakeSoundButtonRepository()
+        val viewModel = SoundBoardViewModel(FakeGroupRepository(), soundButtonRepo, FakeSoundPoolPlayer())
+        viewModel.deleteButton(99L)
+        assertEquals(listOf(99L), soundButtonRepo.deletedIds)
     }
 }
 
@@ -157,4 +166,10 @@ class FakeGroupRepository : GroupRepository {
     }
 
     override suspend fun reorderButtons(groupId: Long, buttons: List<SoundButton>) = Unit
+}
+
+class FakeSoundButtonRepository : SoundButtonRepository {
+    val deletedIds = mutableListOf<Long>()
+    override suspend fun addButton(label: String, filePath: String, groupId: Long) = Unit
+    override suspend fun deleteButton(id: Long) { deletedIds.add(id) }
 }

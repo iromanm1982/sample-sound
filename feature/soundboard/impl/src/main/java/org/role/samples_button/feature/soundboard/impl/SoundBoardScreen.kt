@@ -1,5 +1,7 @@
 package org.role.samples_button.feature.soundboard.impl
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -86,6 +90,7 @@ fun SoundBoardScreen(
                     if (filePath in playingPaths) viewModel.pauseSound(filePath)
                     else viewModel.playSound(filePath)
                 },
+                onDeleteButton = { viewModel.deleteButton(it) },
                 modifier = Modifier.padding(padding)
             )
         }
@@ -122,6 +127,7 @@ private fun GroupList(
     onDelete: (Long) -> Unit,
     onAddSound: (Long) -> Unit,
     onSoundButtonClick: (String) -> Unit,
+    onDeleteButton: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
@@ -131,7 +137,8 @@ private fun GroupList(
                 playingPaths = playingPaths,
                 onDelete = { onDelete(group.id) },
                 onAddSound = { onAddSound(group.id) },
-                onSoundButtonClick = onSoundButtonClick
+                onSoundButtonClick = onSoundButtonClick,
+                onDeleteButton = onDeleteButton
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -144,7 +151,8 @@ private fun GroupCard(
     playingPaths: Set<String>,
     onDelete: () -> Unit,
     onAddSound: () -> Unit,
-    onSoundButtonClick: (String) -> Unit
+    onSoundButtonClick: (String) -> Unit,
+    onDeleteButton: (Long) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -163,7 +171,8 @@ private fun GroupCard(
                 buttons = group.buttons,
                 playingPaths = playingPaths,
                 onAddSound = onAddSound,
-                onSoundButtonClick = onSoundButtonClick
+                onSoundButtonClick = onSoundButtonClick,
+                onDeleteButton = onDeleteButton
             )
         }
     }
@@ -174,7 +183,8 @@ private fun ButtonGrid(
     buttons: List<SoundButton>,
     playingPaths: Set<String>,
     onAddSound: () -> Unit,
-    onSoundButtonClick: (String) -> Unit
+    onSoundButtonClick: (String) -> Unit,
+    onDeleteButton: (Long) -> Unit
 ) {
     val allItems: List<SoundButton?> = buttons + listOf(null)
     allItems.chunked(3).forEach { row ->
@@ -189,6 +199,7 @@ private fun ButtonGrid(
                         button = button,
                         isPlaying = filePath in playingPaths,
                         onClick = { onSoundButtonClick(filePath) },
+                        onDelete = { onDeleteButton(button.id) },
                         modifier = Modifier.weight(1f)
                     )
                 } else {
@@ -203,45 +214,87 @@ private fun ButtonGrid(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SoundButtonItem(
     button: SoundButton,
     isPlaying: Boolean,
     onClick: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.height(64.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPlaying)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.secondaryContainer
-        )
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = button.label,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(4.dp)
+    var showMenu by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier.height(64.dp)) {
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showMenu = true }
+                ),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isPlaying)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.secondaryContainer
             )
-            if (isPlaying) {
-                Icon(
-                    imageVector = Icons.Default.Pause,
-                    contentDescription = null,
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = button.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(2.dp)
-                        .size(12.dp)
+                        .align(Alignment.Center)
+                        .padding(4.dp)
                 )
+                if (isPlaying) {
+                    Icon(
+                        imageVector = Icons.Default.Pause,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp)
+                            .size(12.dp)
+                    )
+                }
             }
         }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Eliminar") },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                onClick = {
+                    showMenu = false
+                    showConfirmDialog = true
+                }
+            )
+        }
+    }
+
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Eliminar sample") },
+            text = { Text("¿Eliminar \"${button.label}\"?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmDialog = false
+                    onDelete()
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 
