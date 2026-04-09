@@ -154,6 +154,7 @@ class SoundBoardViewModelTest {
 class FakeGroupRepository : GroupRepository {
     val createdGroups = mutableListOf<String>()
     val deletedIds = mutableListOf<Long>()
+    val renamedGroups = mutableListOf<Pair<Long, String>>()
     private val _groups = MutableStateFlow<List<Group>>(emptyList())
 
     override fun getGroupsWithButtons(): Flow<List<Group>> = _groups
@@ -171,6 +172,11 @@ class FakeGroupRepository : GroupRepository {
     override suspend fun deleteGroup(id: Long) {
         deletedIds.add(id)
         _groups.value = _groups.value.filter { it.id != id }
+    }
+
+    override suspend fun renameGroup(id: Long, newName: String) {
+        renamedGroups.add(id to newName)
+        _groups.value = _groups.value.map { if (it.id == id) it.copy(name = newName) else it }
     }
 
     override suspend fun reorderButtons(groupId: Long, buttons: List<SoundButton>) = Unit

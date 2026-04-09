@@ -54,4 +54,14 @@ class GroupRepositoryImplTest {
         assertEquals(1, groups[0].buttons.size)
         assertEquals("Kick", groups[0].buttons[0].label)
     }
+
+    @Test
+    fun `renameGroup updates group name`() = runTest {
+        val repo = GroupRepositoryImpl(FakeGroupDao(), FakeSoundButtonDao())
+        repo.createGroup("Old Name")
+        val id = repo.getGroupsWithButtons().first()[0].id
+        repo.renameGroup(id, "New Name")
+        val groups = repo.getGroupsWithButtons().first()
+        assertEquals("New Name", groups[0].name)
+    }
 }
