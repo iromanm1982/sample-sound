@@ -1,5 +1,5 @@
 # Keystores
-*.jks
+*.jksci
 *.keystore
 
 # Android / Gradle
