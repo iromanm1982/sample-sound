@@ -11,6 +11,8 @@ import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import org.role.samples_button.core.designsystem.SamplesButtonTheme
 import org.role.samples_button.feature.browser.impl.FileBrowserScreen
+import org.role.samples_button.feature.soundboard.impl.GroupDetailScreen
+import org.role.samples_button.feature.soundboard.impl.GroupDetailViewModel
 import org.role.samples_button.feature.soundboard.impl.SoundBoardScreen
 import org.role.samples_button.feature.soundboard.impl.SoundBoardViewModel
 
@@ -28,9 +30,26 @@ class MainActivity : Hilt_MainActivity() {
                             androidx.hilt.navigation.compose.hiltViewModel()
                         SoundBoardScreen(
                             viewModel = viewModel,
+                            onNavigateToGroup = { groupId ->
+                                navController.navigate("group_detail/$groupId")
+                            },
                             onNavigateToFileBrowser = { groupId ->
                                 navController.navigate("file_browser/$groupId")
                             }
+                        )
+                    }
+                    composable(
+                        route = "group_detail/{groupId}",
+                        arguments = listOf(navArgument("groupId") { type = NavType.LongType })
+                    ) {
+                        val viewModel: GroupDetailViewModel =
+                            androidx.hilt.navigation.compose.hiltViewModel()
+                        GroupDetailScreen(
+                            viewModel = viewModel,
+                            onNavigateToFileBrowser = { groupId ->
+                                navController.navigate("file_browser/$groupId")
+                            },
+                            onNavigateBack = { navController.popBackStack() }
                         )
                     }
                     composable(
