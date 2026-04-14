@@ -87,6 +87,8 @@ class FakeGroupRepository : GroupRepository {
         _groups.value = _groups.value.map { if (it.id == id) it.copy(name = newName) else it }
     }
 
+    override suspend fun reorderGroups(groups: List<Group>) { /* stub, extended in Task 3 */ }
+
     fun seedGroups(groups: List<Group>) {
         _groups.value = groups
     }
