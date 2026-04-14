@@ -51,8 +51,6 @@ class GroupRepositoryImpl @Inject constructor(
         groupDao.deleteById(id)
     }
 
-    override suspend fun reorderButtons(groupId: Long, buttons: List<SoundButton>) = Unit
-
     override suspend fun renameGroup(id: Long, newName: String) {
         groupDao.updateName(id, newName)
     }

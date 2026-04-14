@@ -136,4 +136,36 @@ class GroupDetailViewModelTest {
         store.clear()
         assertTrue(player.released)
     }
+
+    @Test
+    fun `reorderButtons moves item and delegates to soundButtonRepository`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "A", filePath = "/a.mp3", groupId = 1L, position = 0
+            ),
+            org.role.samples_button.core.model.SoundButton(
+                id = 2L, label = "B", filePath = "/b.mp3", groupId = 1L, position = 1
+            ),
+            org.role.samples_button.core.model.SoundButton(
+                id = 3L, label = "C", filePath = "/c.mp3", groupId = 1L, position = 2
+            ),
+        )
+        val groupRepo = FakeGroupRepository()
+        groupRepo.seedGroups(
+            listOf(
+                org.role.samples_button.core.model.Group(
+                    id = 1L, name = "Test", position = 0, buttons = buttons
+                )
+            )
+        )
+        val soundButtonRepo = FakeSoundButtonRepository()
+        val handle = SavedStateHandle(mapOf("groupId" to 1L))
+        val vm = GroupDetailViewModel(handle, groupRepo, soundButtonRepo, FakeSoundPoolPlayer())
+
+        vm.reorderButtons(from = 0, to = 2)
+
+        val reordered = soundButtonRepo.reorderedLists.last()
+        assertEquals(listOf(2L, 3L, 1L), reordered.map { it.id })
+        assertEquals(listOf(0, 1, 2), reordered.map { it.position })
+    }
 }

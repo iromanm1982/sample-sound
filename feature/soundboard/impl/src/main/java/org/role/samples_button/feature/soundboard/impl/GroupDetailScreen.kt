@@ -1,24 +1,23 @@
 package org.role.samples_button.feature.soundboard.impl
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -47,6 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.role.samples_button.core.model.SoundButton
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,24 +79,19 @@ fun GroupDetailScreen(
         }
     ) { padding ->
         group?.let { g ->
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                ButtonGrid(
-                    buttons = g.buttons,
-                    playingPaths = playingPaths,
-                    onAddSound = { onNavigateToFileBrowser(g.id) },
-                    onSoundButtonClick = { filePath ->
-                        if (filePath in playingPaths) viewModel.pauseSound(filePath)
-                        else viewModel.playSound(filePath)
-                    },
-                    onDeleteButton = { viewModel.deleteButton(it) },
-                    onRenameButton = { id, newLabel -> viewModel.renameButton(id, newLabel) }
-                )
-            }
+            ButtonGrid(
+                buttons = g.buttons,
+                playingPaths = playingPaths,
+                onAddSound = { onNavigateToFileBrowser(g.id) },
+                onSoundButtonClick = { filePath ->
+                    if (filePath in playingPaths) viewModel.pauseSound(filePath)
+                    else viewModel.playSound(filePath)
+                },
+                onDeleteButton = { viewModel.deleteButton(it) },
+                onRenameButton = { id, newLabel -> viewModel.renameButton(id, newLabel) },
+                onReorder = { from, to -> viewModel.reorderButtons(from, to) },
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }
@@ -107,42 +103,49 @@ private fun ButtonGrid(
     onAddSound: () -> Unit,
     onSoundButtonClick: (String) -> Unit,
     onDeleteButton: (Long) -> Unit,
-    onRenameButton: (Long, String) -> Unit
+    onRenameButton: (Long, String) -> Unit,
+    onReorder: (from: Int, to: Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val allItems: List<SoundButton?> = buttons + listOf(null)
-    allItems.chunked(3).forEach { row ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            row.forEach { button ->
-                if (button != null) {
-                    val filePath = button.filePath
-                    SoundButtonItem(
-                        button = button,
-                        isPlaying = filePath in playingPaths,
-                        onClick = { onSoundButtonClick(filePath) },
-                        onDelete = { onDeleteButton(button.id) },
-                        onRename = onRenameButton,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    AddSoundButton(onClick = onAddSound, modifier = Modifier.weight(1f))
-                }
-            }
-            repeat(3 - row.size) {
-                Spacer(modifier = Modifier.weight(1f))
+    val lazyGridState = rememberLazyGridState()
+    val reorderState = rememberReorderableLazyGridState(lazyGridState = lazyGridState) { from, to ->
+        onReorder(from.index, to.index)
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        state = lazyGridState,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        items(buttons, key = { it.id }) { button ->
+            ReorderableItem(reorderState, key = button.id) { isDragging ->
+                SoundButtonItem(
+                    button = button,
+                    isPlaying = button.filePath in playingPaths,
+                    isDragging = isDragging,
+                    dragModifier = Modifier.longPressDraggableHandle(),
+                    onClick = { onSoundButtonClick(button.filePath) },
+                    onDelete = { onDeleteButton(button.id) },
+                    onRename = onRenameButton
+                )
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        item {
+            AddSoundButton(onClick = onAddSound)
+        }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SoundButtonItem(
     button: SoundButton,
     isPlaying: Boolean,
+    isDragging: Boolean,
+    dragModifier: Modifier,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onRename: (Long, String) -> Unit,
@@ -152,14 +155,15 @@ private fun SoundButtonItem(
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.height(64.dp)) {
+    val elevation = if (isDragging) 8.dp else 1.dp
+
+    Box(modifier = modifier.aspectRatio(1f)) {
         Card(
             modifier = Modifier
                 .fillMaxSize()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = { showMenu = true }
-                ),
+                .then(dragModifier)
+                .clickable { onClick() },
+            elevation = CardDefaults.cardElevation(defaultElevation = elevation),
             colors = CardDefaults.cardColors(
                 containerColor = if (isPlaying)
                     MaterialTheme.colorScheme.primaryContainer
@@ -183,9 +187,21 @@ private fun SoundButtonItem(
                         imageVector = Icons.Default.Pause,
                         contentDescription = null,
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
+                            .align(Alignment.BottomStart)
                             .padding(2.dp)
                             .size(12.dp)
+                    )
+                }
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opciones",
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -262,7 +278,7 @@ private fun RenameDialog(
 private fun AddSoundButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedCard(
         onClick = onClick,
-        modifier = modifier.height(64.dp)
+        modifier = modifier.aspectRatio(1f)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Add, contentDescription = "Agregar sonido")

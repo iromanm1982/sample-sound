@@ -59,6 +59,14 @@ class GroupDetailViewModel @Inject constructor(
         viewModelScope.launch { soundButtonRepository.renameButton(id, newLabel) }
     }
 
+    fun reorderButtons(from: Int, to: Int) {
+        val current = group.value?.buttons ?: return
+        val reordered = current.toMutableList()
+            .apply { add(to, removeAt(from)) }
+            .mapIndexed { index, btn -> btn.copy(position = index) }
+        viewModelScope.launch { soundButtonRepository.reorderButtons(reordered) }
+    }
+
     override fun onCleared() {
         soundPoolPlayer.release()
     }

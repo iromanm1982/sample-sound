@@ -63,7 +63,7 @@ class FakeGroupRepository : GroupRepository {
     val createdGroups = mutableListOf<String>()
     val deletedIds = mutableListOf<Long>()
     val renamedGroups = mutableListOf<Pair<Long, String>>()
-    private val _groups = MutableStateFlow<List<Group>>(emptyList())
+    val _groups = MutableStateFlow<List<Group>>(emptyList())
 
     override fun getGroupsWithButtons(): Flow<List<Group>> = _groups
 
@@ -87,13 +87,19 @@ class FakeGroupRepository : GroupRepository {
         _groups.value = _groups.value.map { if (it.id == id) it.copy(name = newName) else it }
     }
 
-    override suspend fun reorderButtons(groupId: Long, buttons: List<SoundButton>) = Unit
+    fun seedGroups(groups: List<Group>) {
+        _groups.value = groups
+    }
 }
 
 class FakeSoundButtonRepository : SoundButtonRepository {
     val deletedIds = mutableListOf<Long>()
     val renamedButtons = mutableListOf<Pair<Long, String>>()
+    val reorderedLists = mutableListOf<List<org.role.samples_button.core.model.SoundButton>>()
     override suspend fun addButton(label: String, filePath: String, groupId: Long) = Unit
     override suspend fun deleteButton(id: Long) { deletedIds.add(id) }
     override suspend fun renameButton(id: Long, newLabel: String) { renamedButtons.add(id to newLabel) }
+    override suspend fun reorderButtons(buttons: List<org.role.samples_button.core.model.SoundButton>) {
+        reorderedLists.add(buttons)
+    }
 }
