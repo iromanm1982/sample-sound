@@ -18,4 +18,7 @@ interface GroupDao {
 
     @Query("UPDATE groups SET name = :name WHERE id = :id")
     suspend fun updateName(id: Long, name: String)
+
+    @Query("UPDATE groups SET position = :position WHERE id = :id")
+    suspend fun updatePosition(id: Long, position: Int)
 }

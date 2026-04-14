@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.role.samples_button.core.model.Group
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +77,7 @@ fun SoundBoardScreen(
                 onAddSound = onNavigateToFileBrowser,
                 onRenameGroup = { id, newName -> viewModel.renameGroup(id, newName) },
                 onDeleteGroup = { viewModel.deleteGroup(it) },
+                onReorder = { from, to -> viewModel.reorderGroups(from, to) },
                 modifier = Modifier.padding(padding)
             )
         }
@@ -109,18 +114,32 @@ private fun GroupList(
     onAddSound: (Long) -> Unit,
     onRenameGroup: (Long, String) -> Unit,
     onDeleteGroup: (Long) -> Unit,
+    onReorder: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+    val lazyListState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        onReorder(from.index, to.index)
+    }
+
+    LazyColumn(
+        state = lazyListState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
+    ) {
         items(groups, key = { it.id }) { group ->
-            GroupCard(
-                group = group,
-                onNavigateToGroup = { onNavigateToGroup(group.id) },
-                onAddSound = { onAddSound(group.id) },
-                onRename = { newName -> onRenameGroup(group.id, newName) },
-                onDelete = { onDeleteGroup(group.id) }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            ReorderableItem(reorderState, key = group.id) { isDragging ->
+                GroupCard(
+                    group = group,
+                    isDragging = isDragging,
+                    dragModifier = Modifier.longPressDraggableHandle(),
+                    onNavigateToGroup = { onNavigateToGroup(group.id) },
+                    onAddSound = { onAddSound(group.id) },
+                    onRename = { newName -> onRenameGroup(group.id, newName) },
+                    onDelete = { onDeleteGroup(group.id) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
     }
 }
@@ -128,6 +147,8 @@ private fun GroupList(
 @Composable
 private fun GroupCard(
     group: Group,
+    isDragging: Boolean,
+    dragModifier: Modifier,
     onNavigateToGroup: () -> Unit,
     onAddSound: () -> Unit,
     onRename: (String) -> Unit,
@@ -137,7 +158,14 @@ private fun GroupCard(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val elevation = if (isDragging) 8.dp else 1.dp
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(dragModifier),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

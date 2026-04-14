@@ -1,11 +1,13 @@
 package org.role.samples_button.core.data
 
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import org.role.samples_button.core.database.AppDatabase
 import org.role.samples_button.core.database.GroupDao
 import org.role.samples_button.core.database.GroupEntity
 import org.role.samples_button.core.database.SoundButtonDao
@@ -18,7 +20,8 @@ import javax.inject.Singleton
 @Singleton
 class GroupRepositoryImpl @Inject constructor(
     private val groupDao: GroupDao,
-    private val soundButtonDao: SoundButtonDao
+    private val soundButtonDao: SoundButtonDao,
+    private val database: AppDatabase
 ) : GroupRepository {
 
     override fun getGroupsWithButtons(): Flow<List<Group>> =
@@ -53,5 +56,11 @@ class GroupRepositoryImpl @Inject constructor(
 
     override suspend fun renameGroup(id: Long, newName: String) {
         groupDao.updateName(id, newName)
+    }
+
+    override suspend fun reorderGroups(groups: List<Group>) {
+        database.withTransaction {
+            groups.forEach { groupDao.updatePosition(it.id, it.position) }
+        }
     }
 }

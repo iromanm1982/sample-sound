@@ -4,7 +4,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -57,12 +59,44 @@ class SoundBoardViewModelTest {
         viewModel.renameGroup(5L, "Renamed")
         assertEquals(listOf(5L to "Renamed"), repo.renamedGroups)
     }
+
+    @Test
+    fun `reorderGroups delegates reordered list with updated positions to repository`() = runTest {
+        val repo = FakeGroupRepository()
+        val groupA = Group(id = 1L, name = "A", position = 0, buttons = emptyList())
+        val groupB = Group(id = 2L, name = "B", position = 1, buttons = emptyList())
+        val groupC = Group(id = 3L, name = "C", position = 2, buttons = emptyList())
+        repo.seedGroups(listOf(groupA, groupB, groupC))
+
+        val viewModel = SoundBoardViewModel(repo)
+
+        // Collect groups to activate the StateFlow
+        val job = launch {
+            viewModel.groups.collect { }
+        }
+        advanceUntilIdle()
+        job.cancel()
+
+        // Move first item (index 0) to last (index 2): [A,B,C] -> [B,C,A]
+        viewModel.reorderGroups(from = 0, to = 2)
+        advanceUntilIdle()
+
+        val reordered = repo.reorderedLists.last()
+        assertEquals(3, reordered.size)
+        assertEquals(2L, reordered[0].id)   // B is now first
+        assertEquals(0, reordered[0].position)
+        assertEquals(3L, reordered[1].id)   // C is second
+        assertEquals(1, reordered[1].position)
+        assertEquals(1L, reordered[2].id)   // A is last
+        assertEquals(2, reordered[2].position)
+    }
 }
 
 class FakeGroupRepository : GroupRepository {
     val createdGroups = mutableListOf<String>()
     val deletedIds = mutableListOf<Long>()
     val renamedGroups = mutableListOf<Pair<Long, String>>()
+    val reorderedLists = mutableListOf<List<Group>>()
     val _groups = MutableStateFlow<List<Group>>(emptyList())
 
     override fun getGroupsWithButtons(): Flow<List<Group>> = _groups
@@ -85,6 +119,11 @@ class FakeGroupRepository : GroupRepository {
     override suspend fun renameGroup(id: Long, newName: String) {
         renamedGroups.add(id to newName)
         _groups.value = _groups.value.map { if (it.id == id) it.copy(name = newName) else it }
+    }
+
+    override suspend fun reorderGroups(groups: List<Group>) {
+        reorderedLists.add(groups)
+        _groups.value = groups
     }
 
     fun seedGroups(groups: List<Group>) {

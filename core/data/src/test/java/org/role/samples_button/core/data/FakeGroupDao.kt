@@ -31,4 +31,12 @@ class FakeGroupDao : GroupDao {
             flow.value = groups.toList()
         }
     }
+
+    override suspend fun updatePosition(id: Long, position: Int) {
+        val index = groups.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            groups[index] = groups[index].copy(position = position)
+            flow.value = groups.sortedBy { it.position }
+        }
+    }
 }
