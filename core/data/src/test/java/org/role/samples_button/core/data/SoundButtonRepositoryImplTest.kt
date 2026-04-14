@@ -54,4 +54,36 @@ class SoundButtonRepositoryImplTest {
         val buttons = dao.getByGroupId(1L).first()
         assertEquals("Bass Drum", buttons[0].label)
     }
+
+    @Test
+    fun `reorderButtons updates position for each button in dao`() = runTest {
+        val dao = FakeSoundButtonDao()
+        val repo = SoundButtonRepositoryImpl(dao)
+        repo.addButton("A", "/a.mp3", 1L)
+        repo.addButton("B", "/b.mp3", 1L)
+        repo.addButton("C", "/c.mp3", 1L)
+        val original = dao.getByGroupId(1L).first()
+        // Simulate moving first item to last: [A,B,C] -> [B,C,A]
+        val reordered = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = original[1].id, label = "B", filePath = "/b.mp3", groupId = 1L, position = 0
+            ),
+            org.role.samples_button.core.model.SoundButton(
+                id = original[2].id, label = "C", filePath = "/c.mp3", groupId = 1L, position = 1
+            ),
+            org.role.samples_button.core.model.SoundButton(
+                id = original[0].id, label = "A", filePath = "/a.mp3", groupId = 1L, position = 2
+            ),
+        )
+
+        repo.reorderButtons(reordered)
+
+        val updated = dao.getByGroupId(1L).first().sortedBy { it.position }
+        assertEquals(original[1].id, updated[0].id)
+        assertEquals(0, updated[0].position)
+        assertEquals(original[2].id, updated[1].id)
+        assertEquals(1, updated[1].position)
+        assertEquals(original[0].id, updated[2].id)
+        assertEquals(2, updated[2].position)
+    }
 }
