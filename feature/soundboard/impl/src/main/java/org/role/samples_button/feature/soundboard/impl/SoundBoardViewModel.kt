@@ -31,4 +31,12 @@ class SoundBoardViewModel @Inject constructor(
     fun renameGroup(id: Long, newName: String) {
         viewModelScope.launch { groupRepository.renameGroup(id, newName) }
     }
+
+    fun reorderGroups(from: Int, to: Int) {
+        val current = groups.value
+        val reordered = current.toMutableList()
+            .apply { add(to, removeAt(from)) }
+            .mapIndexed { index, grp -> grp.copy(position = index) }
+        viewModelScope.launch { groupRepository.reorderGroups(reordered) }
+    }
 }
