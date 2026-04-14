@@ -63,7 +63,7 @@ class FakeGroupRepository : GroupRepository {
     val createdGroups = mutableListOf<String>()
     val deletedIds = mutableListOf<Long>()
     val renamedGroups = mutableListOf<Pair<Long, String>>()
-    private val _groups = MutableStateFlow<List<Group>>(emptyList())
+    val _groups = MutableStateFlow<List<Group>>(emptyList())
 
     override fun getGroupsWithButtons(): Flow<List<Group>> = _groups
 
@@ -88,6 +88,10 @@ class FakeGroupRepository : GroupRepository {
     }
 
     override suspend fun reorderButtons(groupId: Long, buttons: List<SoundButton>) = Unit
+
+    fun seedGroups(groups: List<Group>) {
+        _groups.value = groups
+    }
 }
 
 class FakeSoundButtonRepository : SoundButtonRepository {
