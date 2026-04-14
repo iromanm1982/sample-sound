@@ -1,6 +1,8 @@
 package org.role.samples_button.core.data
 
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.first
+import org.role.samples_button.core.database.AppDatabase
 import org.role.samples_button.core.database.SoundButtonDao
 import org.role.samples_button.core.database.SoundButtonEntity
 import org.role.samples_button.core.model.SoundButton
@@ -9,7 +11,8 @@ import javax.inject.Singleton
 
 @Singleton
 class SoundButtonRepositoryImpl @Inject constructor(
-    private val soundButtonDao: SoundButtonDao
+    private val soundButtonDao: SoundButtonDao,
+    private val database: AppDatabase
 ) : SoundButtonRepository {
 
     override suspend fun addButton(label: String, filePath: String, groupId: Long) {
@@ -28,6 +31,8 @@ class SoundButtonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun reorderButtons(buttons: List<SoundButton>) {
-        buttons.forEach { soundButtonDao.updatePosition(it.id, it.position) }
+        database.withTransaction {
+            buttons.forEach { soundButtonDao.updatePosition(it.id, it.position) }
+        }
     }
 }

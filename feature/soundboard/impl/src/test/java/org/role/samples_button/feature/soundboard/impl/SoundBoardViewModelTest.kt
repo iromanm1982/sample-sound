@@ -87,8 +87,6 @@ class FakeGroupRepository : GroupRepository {
         _groups.value = _groups.value.map { if (it.id == id) it.copy(name = newName) else it }
     }
 
-    override suspend fun reorderButtons(groupId: Long, buttons: List<SoundButton>) = Unit
-
     fun seedGroups(groups: List<Group>) {
         _groups.value = groups
     }
