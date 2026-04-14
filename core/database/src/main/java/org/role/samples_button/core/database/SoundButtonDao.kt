@@ -18,4 +18,7 @@ interface SoundButtonDao {
 
     @Query("UPDATE sound_buttons SET label = :label WHERE id = :id")
     suspend fun updateLabel(id: Long, label: String)
+
+    @Query("UPDATE sound_buttons SET position = :position WHERE id = :id")
+    suspend fun updatePosition(id: Long, position: Int)
 }
