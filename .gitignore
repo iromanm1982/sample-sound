@@ -26,6 +26,7 @@ local.properties
 /.idea/deploymentTargetDropDown.xml
 /.idea/deploymentTargetSelector.xml
 /.idea/.gitignore
+/.idea/*
 *.iws
 
 # Lint
@@ -39,3 +40,7 @@ Thumbs.db
 # Claude Code
 .claude/settings.local.json
 .claude/__pycache__/
+
+# Superpowers
+
+.superpowers/*
