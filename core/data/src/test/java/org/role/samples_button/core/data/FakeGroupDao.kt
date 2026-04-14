@@ -23,4 +23,12 @@ class FakeGroupDao : GroupDao {
         groups.removeAll { it.id == id }
         flow.value = groups.toList()
     }
+
+    override suspend fun updateName(id: Long, name: String) {
+        val index = groups.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            groups[index] = groups[index].copy(name = name)
+            flow.value = groups.toList()
+        }
+    }
 }
