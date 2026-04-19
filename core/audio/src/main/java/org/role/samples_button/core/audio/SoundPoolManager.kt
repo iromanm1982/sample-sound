@@ -106,4 +106,12 @@ class SoundPoolManager @Inject constructor(
             pendingPause.clear()
         }
     }
+
+    override fun restart(filePath: String) {
+        // TODO: implement in Task 2
+    }
+
+    override fun setLooping(filePath: String, loop: Boolean) {
+        // TODO: implement in Task 2
+    }
 }

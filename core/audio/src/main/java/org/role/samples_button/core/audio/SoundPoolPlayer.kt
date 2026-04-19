@@ -5,4 +5,6 @@ interface SoundPoolPlayer {
     fun pause(filePath: String)
     fun pauseAll()
     fun release()
+    fun restart(filePath: String)
+    fun setLooping(filePath: String, loop: Boolean)
 }
