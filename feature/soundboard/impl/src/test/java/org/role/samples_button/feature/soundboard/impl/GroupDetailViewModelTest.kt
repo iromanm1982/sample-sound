@@ -20,7 +20,7 @@ import org.junit.Test
 
 class FakeDurationReader(private val data: Map<String, Long> = emptyMap()) :
     org.role.samples_button.core.audio.DurationReader {
-    override fun getDurationMs(filePath: String): Long = data[filePath] ?: 0L
+    override suspend fun getDurationMs(filePath: String): Long = data[filePath] ?: 0L
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
