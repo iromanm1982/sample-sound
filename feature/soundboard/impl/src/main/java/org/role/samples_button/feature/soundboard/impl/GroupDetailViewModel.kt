@@ -8,10 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.role.samples_button.core.audio.DurationReader
 import org.role.samples_button.core.audio.SoundPoolPlayer
 import org.role.samples_button.core.data.GroupRepository
 import org.role.samples_button.core.data.SoundButtonRepository
@@ -23,7 +25,8 @@ class GroupDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val groupRepository: GroupRepository,
     private val soundButtonRepository: SoundButtonRepository,
-    private val soundPoolPlayer: SoundPoolPlayer
+    private val soundPoolPlayer: SoundPoolPlayer,
+    private val durationReader: DurationReader
 ) : ViewModel() {
 
     private val groupId: Long = checkNotNull(savedStateHandle["groupId"])
@@ -35,6 +38,23 @@ class GroupDetailViewModel @Inject constructor(
 
     private val _playingPaths = MutableStateFlow<Set<String>>(emptySet())
     val playingPaths: StateFlow<Set<String>> = _playingPaths.asStateFlow()
+
+    private val _loopingPaths = MutableStateFlow<Set<String>>(emptySet())
+    val loopingPaths: StateFlow<Set<String>> = _loopingPaths.asStateFlow()
+
+    private val _durations = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val durations: StateFlow<Map<String, Long>> = _durations.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            group.filterNotNull().collect { g ->
+                val map = g.buttons.associate { btn ->
+                    btn.filePath to durationReader.getDurationMs(btn.filePath)
+                }
+                _durations.value = map
+            }
+        }
+    }
 
     fun playSound(filePath: String) {
         soundPoolPlayer.play(filePath)
@@ -49,6 +69,16 @@ class GroupDetailViewModel @Inject constructor(
     fun pauseAll() {
         soundPoolPlayer.pauseAll()
         _playingPaths.value = emptySet()
+    }
+
+    fun restartSound(filePath: String) {
+        soundPoolPlayer.restart(filePath)
+    }
+
+    fun toggleLoop(filePath: String) {
+        val isNowLooping = filePath !in _loopingPaths.value
+        _loopingPaths.update { if (isNowLooping) it + filePath else it - filePath }
+        soundPoolPlayer.setLooping(filePath, isNowLooping)
     }
 
     fun deleteButton(id: Long) {
