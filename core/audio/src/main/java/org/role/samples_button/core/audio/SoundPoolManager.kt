@@ -48,7 +48,7 @@ class SoundPoolManager @Inject constructor(
                 player.setOnPreparedListener { mp ->
                     synchronized(lock) {
                         // Apply any pending loop setting
-                        pendingLoops[filePath]?.let { mp.isLooping = it }
+                        pendingLoops.remove(filePath)?.let { mp.isLooping = it }
                         // Check if we should start (pause may have been called during preparation)
                         val shouldStart = !pendingPause.remove(filePath)
                         if (shouldStart) {
