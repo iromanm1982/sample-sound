@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -253,7 +253,7 @@ private fun SoundButtonRow(
                 }
                 IconButton(onClick = onToggleLoop, modifier = Modifier.size(40.dp)) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        imageVector = Icons.Default.Repeat,
                         contentDescription = if (isLooping) "Desactivar bucle" else "Activar bucle",
                         tint = if (isLooping)
                             MaterialTheme.colorScheme.primary
