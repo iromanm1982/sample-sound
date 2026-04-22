@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -316,5 +317,26 @@ class GroupDetailViewModelTest {
         vm.pauseAll()
 
         assertEquals(0.6f, vm.progress.value["/kick.mp3"])
+    }
+
+    @Test
+    fun `progress is updated by polling during playback`() = runTest(testDispatcher) {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val player = FakeSoundPoolPlayer(positions = mapOf("/kick.mp3" to 1000L))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, player = player, durationReader = reader)
+
+        vm.playSound("/kick.mp3")
+        advanceTimeBy(150)
+
+        assertEquals(0.25f, vm.progress.value["/kick.mp3"])
+
+        vm.pauseSound("/kick.mp3") // stop the infinite polling loop
     }
 }

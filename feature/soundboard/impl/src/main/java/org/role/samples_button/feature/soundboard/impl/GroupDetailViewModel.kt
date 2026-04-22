@@ -97,9 +97,10 @@ class GroupDetailViewModel @Inject constructor(
 
     fun seekSound(filePath: String, fraction: Float) {
         val durationMs = _durations.value[filePath] ?: return
-        val posMs = (fraction * durationMs).toLong()
+        val clamped = fraction.coerceIn(0f, 1f)
+        val posMs = (clamped * durationMs).toLong()
         soundPoolPlayer.seekTo(filePath, posMs)
-        _progress.update { it + (filePath to fraction.coerceIn(0f, 1f)) }
+        _progress.update { it + (filePath to clamped) }
     }
 
     fun restartSound(filePath: String) {
