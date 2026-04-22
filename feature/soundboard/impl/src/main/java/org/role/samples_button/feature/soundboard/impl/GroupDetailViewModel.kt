@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +47,11 @@ class GroupDetailViewModel @Inject constructor(
     private val _durations = MutableStateFlow<Map<String, Long>>(emptyMap())
     val durations: StateFlow<Map<String, Long>> = _durations.asStateFlow()
 
+    private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val progress: StateFlow<Map<String, Float>> = _progress.asStateFlow()
+
+    private val progressJobs = mutableMapOf<String, Job>()
+
     init {
         viewModelScope.launch {
             group.filterNotNull().collect { g ->
@@ -59,16 +66,40 @@ class GroupDetailViewModel @Inject constructor(
     fun playSound(filePath: String) {
         soundPoolPlayer.play(filePath)
         _playingPaths.update { it + filePath }
+        startProgressPolling(filePath)
+    }
+
+    private fun startProgressPolling(filePath: String) {
+        progressJobs[filePath]?.cancel()
+        progressJobs[filePath] = viewModelScope.launch {
+            while (true) {
+                delay(100)
+                val durationMs = _durations.value[filePath] ?: 0L
+                val posMs = soundPoolPlayer.getCurrentPositionMs(filePath)
+                val fraction = if (durationMs > 0L) (posMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+                _progress.update { it + (filePath to fraction) }
+            }
+        }
     }
 
     fun pauseSound(filePath: String) {
         soundPoolPlayer.pause(filePath)
         _playingPaths.update { it - filePath }
+        progressJobs.remove(filePath)?.cancel()
     }
 
     fun pauseAll() {
         soundPoolPlayer.pauseAll()
         _playingPaths.value = emptySet()
+        progressJobs.values.forEach { it.cancel() }
+        progressJobs.clear()
+    }
+
+    fun seekSound(filePath: String, fraction: Float) {
+        val durationMs = _durations.value[filePath] ?: return
+        val posMs = (fraction * durationMs).toLong()
+        soundPoolPlayer.seekTo(filePath, posMs)
+        _progress.update { it + (filePath to fraction.coerceIn(0f, 1f)) }
     }
 
     fun restartSound(filePath: String) {
@@ -98,6 +129,8 @@ class GroupDetailViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        progressJobs.values.forEach { it.cancel() }
+        progressJobs.clear()
         soundPoolPlayer.release()
     }
 }

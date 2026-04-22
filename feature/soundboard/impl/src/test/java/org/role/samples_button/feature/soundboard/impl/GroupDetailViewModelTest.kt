@@ -236,4 +236,85 @@ class GroupDetailViewModelTest {
         assertEquals(45_000L, vm.durations.value["/kick.mp3"])
         assertEquals(22_000L, vm.durations.value["/snare.mp3"])
     }
+
+    @Test
+    fun `seekSound delegates seekTo to player with correct position`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val player = FakeSoundPoolPlayer()
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, player = player, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.5f)
+
+        assertEquals(listOf("/kick.mp3" to 2000L), player.seekedTo)
+    }
+
+    @Test
+    fun `seekSound updates progress state immediately`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.75f)
+
+        assertEquals(0.75f, vm.progress.value["/kick.mp3"])
+    }
+
+    @Test
+    fun `seekSound does nothing when filePath has no duration`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val vm = makeVm(groupId = 1L, player = player)
+
+        vm.seekSound("/missing.mp3", 0.5f)
+
+        assertTrue(player.seekedTo.isEmpty())
+    }
+
+    @Test
+    fun `pauseSound preserves last progress value`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.4f)
+        vm.pauseSound("/kick.mp3")
+
+        assertEquals(0.4f, vm.progress.value["/kick.mp3"])
+    }
+
+    @Test
+    fun `pauseAll preserves progress values`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.6f)
+        vm.pauseAll()
+
+        assertEquals(0.6f, vm.progress.value["/kick.mp3"])
+    }
 }
