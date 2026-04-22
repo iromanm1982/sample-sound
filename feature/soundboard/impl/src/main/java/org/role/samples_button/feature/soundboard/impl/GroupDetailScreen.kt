@@ -1,5 +1,6 @@
 package org.role.samples_button.feature.soundboard.impl
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -251,7 +253,15 @@ private fun SoundButtonRow(
                         contentDescription = "Volver al principio"
                     )
                 }
-                IconButton(onClick = onToggleLoop, modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onToggleLoop,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = if (isLooping) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            shape = CircleShape
+                        )
+                ) {
                     Icon(
                         imageVector = Icons.Default.Repeat,
                         contentDescription = if (isLooping) "Desactivar bucle" else "Activar bucle",
