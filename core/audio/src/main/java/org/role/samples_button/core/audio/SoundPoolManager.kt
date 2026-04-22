@@ -132,4 +132,18 @@ class SoundPoolManager @Inject constructor(
             }
         }
     }
+
+    override fun getCurrentPositionMs(filePath: String): Long {
+        synchronized(lock) {
+            val player = activePlayers[filePath] ?: return 0L
+            return try { player.currentPosition.toLong() } catch (_: Exception) { 0L }
+        }
+    }
+
+    override fun seekTo(filePath: String, positionMs: Long) {
+        synchronized(lock) {
+            val player = activePlayers[filePath] ?: return
+            try { player.seekTo(positionMs.toInt()) } catch (_: Exception) {}
+        }
+    }
 }
