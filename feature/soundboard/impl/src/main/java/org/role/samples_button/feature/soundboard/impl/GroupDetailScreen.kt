@@ -1,7 +1,10 @@
 package org.role.samples_button.feature.soundboard.impl
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,12 +12,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -33,6 +37,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -47,6 +52,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,6 +72,7 @@ fun GroupDetailScreen(
     val playingPaths by viewModel.playingPaths.collectAsStateWithLifecycle()
     val loopingPaths by viewModel.loopingPaths.collectAsStateWithLifecycle()
     val durations by viewModel.durations.collectAsStateWithLifecycle()
+    val progress by viewModel.progress.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -91,6 +99,7 @@ fun GroupDetailScreen(
                 playingPaths = playingPaths,
                 loopingPaths = loopingPaths,
                 durations = durations,
+                progress = progress,
                 onAddSound = { onNavigateToFileBrowser(g.id) },
                 onSoundButtonClick = { filePath ->
                     if (filePath in playingPaths) viewModel.pauseSound(filePath)
@@ -98,6 +107,7 @@ fun GroupDetailScreen(
                 },
                 onRestartButton = { viewModel.restartSound(it) },
                 onToggleLoop = { viewModel.toggleLoop(it) },
+                onSeek = { filePath, fraction -> viewModel.seekSound(filePath, fraction) },
                 onDeleteButton = { viewModel.deleteButton(it) },
                 onRenameButton = { id, newLabel -> viewModel.renameButton(id, newLabel) },
                 onReorder = { from, to -> viewModel.reorderButtons(from, to) },
@@ -113,10 +123,12 @@ private fun ButtonList(
     playingPaths: Set<String>,
     loopingPaths: Set<String>,
     durations: Map<String, Long>,
+    progress: Map<String, Float>,
     onAddSound: () -> Unit,
     onSoundButtonClick: (String) -> Unit,
     onRestartButton: (String) -> Unit,
     onToggleLoop: (String) -> Unit,
+    onSeek: (filePath: String, fraction: Float) -> Unit,
     onDeleteButton: (Long) -> Unit,
     onRenameButton: (Long, String) -> Unit,
     onReorder: (from: Int, to: Int) -> Unit,
@@ -140,11 +152,13 @@ private fun ButtonList(
                     isPlaying = button.filePath in playingPaths,
                     isLooping = button.filePath in loopingPaths,
                     durationMs = durations[button.filePath] ?: 0L,
+                    progress = progress[button.filePath] ?: 0f,
                     isDragging = isDragging,
                     dragModifier = Modifier.longPressDraggableHandle(),
                     onClick = { onSoundButtonClick(button.filePath) },
                     onRestart = { onRestartButton(button.filePath) },
                     onToggleLoop = { onToggleLoop(button.filePath) },
+                    onSeek = { fraction -> onSeek(button.filePath, fraction) },
                     onDelete = { onDeleteButton(button.id) },
                     onRename = onRenameButton
                 )
@@ -162,11 +176,13 @@ private fun SoundButtonRow(
     isPlaying: Boolean,
     isLooping: Boolean,
     durationMs: Long,
+    progress: Float,
     isDragging: Boolean,
     dragModifier: Modifier,
     onClick: () -> Unit,
     onRestart: () -> Unit,
     onToggleLoop: () -> Unit,
+    onSeek: (Float) -> Unit,
     onDelete: () -> Unit,
     onRename: (Long, String) -> Unit,
     modifier: Modifier = Modifier
@@ -278,6 +294,15 @@ private fun SoundButtonRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Fila 3: barra de progreso interactiva
+            PlaybackProgressBar(
+                progress = progress,
+                isPlaying = isPlaying,
+                onSeek = onSeek
+            )
         }
     }
 
@@ -301,6 +326,49 @@ private fun SoundButtonRow(
             onConfirm = { newLabel -> showRenameDialog = false; onRename(button.id, newLabel) },
             onDismiss = { showRenameDialog = false }
         )
+    }
+}
+
+@Composable
+private fun PlaybackProgressBar(
+    progress: Float,
+    isPlaying: Boolean,
+    onSeek: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val color = if (isPlaying) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(16.dp)
+            .pointerInput(onSeek) {
+                detectTapGestures { offset ->
+                    onSeek((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
+                }
+            }
+    ) {
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .align(Alignment.Center),
+            color = color,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            strokeCap = StrokeCap.Round
+        )
+        if (isPlaying) {
+            val thumbOffset = (maxWidth * progress - 6.dp).coerceAtLeast(0.dp)
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .offset(x = thumbOffset)
+                    .background(color, CircleShape)
+                    .align(Alignment.CenterStart)
+            )
+        }
     }
 }
 
