@@ -118,7 +118,7 @@ class SoundPoolManager @Inject constructor(
     override fun restart(filePath: String) {
         synchronized(lock) {
             val player = activePlayers[filePath] ?: return
-            try { player.seekTo(0) } catch (_: Exception) {}
+            try { player.seekTo(0L, MediaPlayer.SEEK_CLOSEST) } catch (_: Exception) {}
         }
     }
 
@@ -143,7 +143,7 @@ class SoundPoolManager @Inject constructor(
     override fun seekTo(filePath: String, positionMs: Long) {
         synchronized(lock) {
             val player = activePlayers[filePath] ?: return
-            try { player.seekTo(positionMs.toInt()) } catch (_: Exception) {}
+            try { player.seekTo(positionMs, MediaPlayer.SEEK_CLOSEST) } catch (_: Exception) {}
         }
     }
 }
