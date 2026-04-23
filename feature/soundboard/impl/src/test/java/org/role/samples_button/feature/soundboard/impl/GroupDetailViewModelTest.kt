@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -17,6 +18,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+
+class FakeDurationReader(private val data: Map<String, Long> = emptyMap()) :
+    org.role.samples_button.core.audio.DurationReader {
+    override suspend fun getDurationMs(filePath: String): Long = data[filePath] ?: 0L
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GroupDetailViewModelTest {
@@ -32,10 +38,11 @@ class GroupDetailViewModelTest {
     private fun makeVm(
         groupId: Long,
         repo: FakeGroupRepository = FakeGroupRepository(),
-        player: FakeSoundPoolPlayer = FakeSoundPoolPlayer()
+        player: FakeSoundPoolPlayer = FakeSoundPoolPlayer(),
+        durationReader: FakeDurationReader = FakeDurationReader()
     ): GroupDetailViewModel {
         val handle = SavedStateHandle(mapOf("groupId" to groupId))
-        return GroupDetailViewModel(handle, repo, FakeSoundButtonRepository(), player)
+        return GroupDetailViewModel(handle, repo, FakeSoundButtonRepository(), player, durationReader)
     }
 
     @Test
@@ -104,7 +111,7 @@ class GroupDetailViewModelTest {
     fun `deleteButton delegates to repository`() = runTest {
         val soundButtonRepo = FakeSoundButtonRepository()
         val handle = SavedStateHandle(mapOf("groupId" to 1L))
-        val vm = GroupDetailViewModel(handle, FakeGroupRepository(), soundButtonRepo, FakeSoundPoolPlayer())
+        val vm = GroupDetailViewModel(handle, FakeGroupRepository(), soundButtonRepo, FakeSoundPoolPlayer(), FakeDurationReader())
         vm.deleteButton(99L)
         assertEquals(listOf(99L), soundButtonRepo.deletedIds)
     }
@@ -113,7 +120,7 @@ class GroupDetailViewModelTest {
     fun `renameButton delegates to repository`() = runTest {
         val soundButtonRepo = FakeSoundButtonRepository()
         val handle = SavedStateHandle(mapOf("groupId" to 1L))
-        val vm = GroupDetailViewModel(handle, FakeGroupRepository(), soundButtonRepo, FakeSoundPoolPlayer())
+        val vm = GroupDetailViewModel(handle, FakeGroupRepository(), soundButtonRepo, FakeSoundPoolPlayer(), FakeDurationReader())
         vm.renameButton(7L, "New Name")
         assertEquals(listOf(7L to "New Name"), soundButtonRepo.renamedButtons)
     }
@@ -129,7 +136,8 @@ class GroupDetailViewModelTest {
                     SavedStateHandle(mapOf("groupId" to 1L)),
                     FakeGroupRepository(),
                     FakeSoundButtonRepository(),
-                    player
+                    player,
+                    FakeDurationReader()
                 ) as T
         }
         ViewModelProvider(store, factory)[GroupDetailViewModel::class.java]
@@ -160,12 +168,175 @@ class GroupDetailViewModelTest {
         )
         val soundButtonRepo = FakeSoundButtonRepository()
         val handle = SavedStateHandle(mapOf("groupId" to 1L))
-        val vm = GroupDetailViewModel(handle, groupRepo, soundButtonRepo, FakeSoundPoolPlayer())
+        val vm = GroupDetailViewModel(handle, groupRepo, soundButtonRepo, FakeSoundPoolPlayer(), FakeDurationReader())
 
         vm.reorderButtons(from = 0, to = 2)
 
         val reordered = soundButtonRepo.reorderedLists.last()
         assertEquals(listOf(2L, 3L, 1L), reordered.map { it.id })
         assertEquals(listOf(0, 1, 2), reordered.map { it.position })
+    }
+
+    @Test
+    fun `toggleLoop adds filePath to loopingPaths when not looping`() = runTest {
+        val vm = makeVm(1L)
+        vm.toggleLoop("/storage/kick.mp3")
+        assertTrue(vm.loopingPaths.value.contains("/storage/kick.mp3"))
+    }
+
+    @Test
+    fun `toggleLoop removes filePath from loopingPaths when already looping`() = runTest {
+        val vm = makeVm(1L)
+        vm.toggleLoop("/storage/kick.mp3")
+        vm.toggleLoop("/storage/kick.mp3")
+        assertFalse(vm.loopingPaths.value.contains("/storage/kick.mp3"))
+    }
+
+    @Test
+    fun `toggleLoop delegates setLooping true to player`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val vm = makeVm(groupId = 1L, player = player)
+        vm.toggleLoop("/storage/kick.mp3")
+        assertEquals(true, player.loopingStates["/storage/kick.mp3"])
+    }
+
+    @Test
+    fun `toggleLoop delegates setLooping false when already looping`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val vm = makeVm(groupId = 1L, player = player)
+        vm.toggleLoop("/storage/kick.mp3")
+        vm.toggleLoop("/storage/kick.mp3")
+        assertEquals(false, player.loopingStates["/storage/kick.mp3"])
+    }
+
+    @Test
+    fun `restartSound delegates restart to player`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val vm = makeVm(groupId = 1L, player = player)
+        vm.restartSound("/storage/kick.mp3")
+        assertEquals(listOf("/storage/kick.mp3"), player.restartedPaths)
+    }
+
+    @Test
+    fun `durations are populated from group buttons via DurationReader`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            ),
+            org.role.samples_button.core.model.SoundButton(
+                id = 2L, label = "Snare", filePath = "/snare.mp3", groupId = 1L, position = 1
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(
+            listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons))
+        )
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 45_000L, "/snare.mp3" to 22_000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        assertEquals(45_000L, vm.durations.value["/kick.mp3"])
+        assertEquals(22_000L, vm.durations.value["/snare.mp3"])
+    }
+
+    @Test
+    fun `seekSound delegates seekTo to player with correct position`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val player = FakeSoundPoolPlayer()
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, player = player, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.5f)
+
+        assertEquals(listOf("/kick.mp3" to 2000L), player.seekedTo)
+    }
+
+    @Test
+    fun `seekSound updates progress state immediately`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.75f)
+
+        assertEquals(0.75f, vm.progress.value["/kick.mp3"])
+    }
+
+    @Test
+    fun `seekSound does nothing when filePath has no duration`() = runTest {
+        val player = FakeSoundPoolPlayer()
+        val vm = makeVm(groupId = 1L, player = player)
+
+        vm.seekSound("/missing.mp3", 0.5f)
+
+        assertTrue(player.seekedTo.isEmpty())
+    }
+
+    @Test
+    fun `pauseSound preserves last progress value`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.4f)
+        vm.pauseSound("/kick.mp3")
+
+        assertEquals(0.4f, vm.progress.value["/kick.mp3"])
+    }
+
+    @Test
+    fun `pauseAll preserves progress values`() = runTest {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, durationReader = reader)
+
+        vm.seekSound("/kick.mp3", 0.6f)
+        vm.pauseAll()
+
+        assertEquals(0.6f, vm.progress.value["/kick.mp3"])
+    }
+
+    @Test
+    fun `progress is updated by polling during playback`() = runTest(testDispatcher) {
+        val buttons = listOf(
+            org.role.samples_button.core.model.SoundButton(
+                id = 1L, label = "Kick", filePath = "/kick.mp3", groupId = 1L, position = 0
+            )
+        )
+        val repo = FakeGroupRepository()
+        repo.seedGroups(listOf(org.role.samples_button.core.model.Group(id = 1L, name = "Test", position = 0, buttons = buttons)))
+        val player = FakeSoundPoolPlayer(positions = mapOf("/kick.mp3" to 1000L))
+        val reader = FakeDurationReader(mapOf("/kick.mp3" to 4000L))
+        val vm = makeVm(groupId = 1L, repo = repo, player = player, durationReader = reader)
+
+        vm.playSound("/kick.mp3")
+        advanceTimeBy(150)
+
+        assertEquals(0.25f, vm.progress.value["/kick.mp3"])
+
+        vm.pauseSound("/kick.mp3") // stop the infinite polling loop
     }
 }

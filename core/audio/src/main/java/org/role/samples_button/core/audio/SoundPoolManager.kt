@@ -23,6 +23,8 @@ class SoundPoolManager @Inject constructor(
     private val activePlayers = LinkedHashMap<String, MediaPlayer>()
     // Paths that should not start playing when prepareAsync completes
     private val pendingPause = mutableSetOf<String>()
+    // Loop settings to apply when player is prepared
+    private val pendingLoops = mutableMapOf<String, Boolean>()
 
     override fun play(filePath: String) {
         synchronized(lock) {
@@ -44,10 +46,14 @@ class SoundPoolManager @Inject constructor(
                 player.setAudioAttributes(audioAttributes)
                 player.setDataSource(filePath)
                 player.setOnPreparedListener { mp ->
-                    // Check pendingPause under lock — pause() may have been called during preparation
-                    val shouldStart = synchronized(lock) { !pendingPause.remove(filePath) }
-                    if (shouldStart) {
-                        try { mp.start() } catch (_: Exception) {}
+                    synchronized(lock) {
+                        // Apply any pending loop setting
+                        pendingLoops.remove(filePath)?.let { mp.isLooping = it }
+                        // Check if we should start (pause may have been called during preparation)
+                        val shouldStart = !pendingPause.remove(filePath)
+                        if (shouldStart) {
+                            try { mp.start() } catch (_: Exception) {}
+                        }
                     }
                 }
                 player.setOnErrorListener { _, _, _ -> true }
@@ -90,6 +96,7 @@ class SoundPoolManager @Inject constructor(
             val oldestPath = activePlayers.keys.first()
             val player = activePlayers.remove(oldestPath)!!
             pendingPause.remove(oldestPath)
+            pendingLoops.remove(oldestPath)
             try { player.stop() } catch (_: Exception) {}
             activePlayers[forPath] = player
             player
@@ -104,6 +111,39 @@ class SoundPoolManager @Inject constructor(
             activePlayers.values.forEach { try { it.release() } catch (_: Exception) {} }
             activePlayers.clear()
             pendingPause.clear()
+            pendingLoops.clear()
+        }
+    }
+
+    override fun restart(filePath: String) {
+        synchronized(lock) {
+            val player = activePlayers[filePath] ?: return
+            try { player.seekTo(0L, MediaPlayer.SEEK_CLOSEST) } catch (_: Exception) {}
+        }
+    }
+
+    override fun setLooping(filePath: String, loop: Boolean) {
+        synchronized(lock) {
+            val player = activePlayers[filePath]
+            if (player != null) {
+                try { player.isLooping = loop } catch (_: Exception) {}
+            } else {
+                pendingLoops[filePath] = loop
+            }
+        }
+    }
+
+    override fun getCurrentPositionMs(filePath: String): Long {
+        synchronized(lock) {
+            val player = activePlayers[filePath] ?: return 0L
+            return try { player.currentPosition.toLong() } catch (_: Exception) { 0L }
+        }
+    }
+
+    override fun seekTo(filePath: String, positionMs: Long) {
+        synchronized(lock) {
+            val player = activePlayers[filePath] ?: return
+            try { player.seekTo(positionMs, MediaPlayer.SEEK_CLOSEST) } catch (_: Exception) {}
         }
     }
 }
