@@ -10,6 +10,8 @@ import org.role.samples_button.core.data.GroupRepository
 import org.role.samples_button.core.data.GroupRepositoryImpl
 import org.role.samples_button.core.data.SoundButtonRepository
 import org.role.samples_button.core.data.SoundButtonRepositoryImpl
+import org.role.samples_button.core.data.UserPreferencesRepository
+import org.role.samples_button.core.data.UserPreferencesRepositoryImpl
 import javax.inject.Singleton
 
 @Module
@@ -27,4 +29,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAudioFileRepository(impl: AudioFileRepositoryImpl): AudioFileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUserPreferencesRepository(impl: UserPreferencesRepositoryImpl): UserPreferencesRepository
 }
