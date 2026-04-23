@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
@@ -274,7 +275,7 @@ private fun SoundButtonRow(
                     modifier = Modifier
                         .size(40.dp)
                         .background(
-                            color = if (isLooping) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            color = if (isLooping) MaterialTheme.colorScheme.primary else Color.Transparent,
                             shape = CircleShape
                         )
                 ) {
@@ -282,7 +283,7 @@ private fun SoundButtonRow(
                         imageVector = Icons.Default.Repeat,
                         contentDescription = if (isLooping) "Desactivar bucle" else "Activar bucle",
                         tint = if (isLooping)
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.onPrimary
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
