@@ -8,17 +8,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.role.samples_button.core.data.GroupRepository
+import org.role.samples_button.core.data.UserPreferencesRepository
 import org.role.samples_button.core.model.Group
 import javax.inject.Inject
 
 @HiltViewModel
 class SoundBoardViewModel @Inject constructor(
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     val groups: StateFlow<List<Group>> = groupRepository
         .getGroupsWithButtons()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val hasSeenOnboarding: StateFlow<Boolean?> = userPreferencesRepository
+        .hasSeenOnboarding
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun markOnboardingSeen() {
+        viewModelScope.launch { userPreferencesRepository.markSeen() }
+    }
 
     fun createGroup(name: String) {
         viewModelScope.launch { groupRepository.createGroup(name) }

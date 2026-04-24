@@ -11,6 +11,8 @@ import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
 import org.role.samples_button.core.designsystem.SamplesButtonTheme
 import org.role.samples_button.feature.browser.impl.FileBrowserScreen
+import org.role.samples_button.feature.onboarding.impl.OnboardingScreen
+import org.role.samples_button.feature.onboarding.impl.OnboardingViewModel
 import org.role.samples_button.feature.soundboard.impl.GroupDetailScreen
 import org.role.samples_button.feature.soundboard.impl.GroupDetailViewModel
 import org.role.samples_button.feature.soundboard.impl.SoundBoardScreen
@@ -35,6 +37,9 @@ class MainActivity : Hilt_MainActivity() {
                             },
                             onNavigateToFileBrowser = { groupId ->
                                 navController.navigate("file_browser/$groupId")
+                            },
+                            onNavigateToOnboarding = {
+                                navController.navigate("onboarding?firstRun=true")
                             }
                         )
                     }
@@ -60,6 +65,23 @@ class MainActivity : Hilt_MainActivity() {
                         FileBrowserScreen(
                             groupId = groupId,
                             onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(
+                        route = "onboarding?firstRun={firstRun}",
+                        arguments = listOf(navArgument("firstRun") {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        })
+                    ) { backStackEntry ->
+                        val isFirstRun = backStackEntry.arguments?.getBoolean("firstRun") ?: false
+                        val viewModel: OnboardingViewModel =
+                            androidx.hilt.navigation.compose.hiltViewModel()
+                        OnboardingScreen(
+                            isFirstRun = isFirstRun,
+                            onFinish = { navController.popBackStack() },
+                            onMarkSeen = { viewModel.markSeen() }
                         )
                     }
                 }
