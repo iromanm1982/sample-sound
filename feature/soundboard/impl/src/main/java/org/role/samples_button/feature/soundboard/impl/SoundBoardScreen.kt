@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -36,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,14 +55,47 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun SoundBoardScreen(
     viewModel: SoundBoardViewModel,
     onNavigateToGroup: (Long) -> Unit = {},
-    onNavigateToFileBrowser: (Long) -> Unit = {}
+    onNavigateToFileBrowser: (Long) -> Unit = {},
+    onNavigateToOnboarding: () -> Unit = {}
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
+    val hasSeenOnboarding by viewModel.hasSeenOnboarding.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showTopMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(hasSeenOnboarding) {
+        if (hasSeenOnboarding == false) {
+            onNavigateToOnboarding()
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("SoundBoard") })
+            TopAppBar(
+                title = { Text("SoundBoard") },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showTopMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                        }
+                        DropdownMenu(
+                            expanded = showTopMenu,
+                            onDismissRequest = { showTopMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Ver tutorial") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Info, contentDescription = null)
+                                },
+                                onClick = {
+                                    showTopMenu = false
+                                    onNavigateToOnboarding()
+                                }
+                            )
+                        }
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
