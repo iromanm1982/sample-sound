@@ -46,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import org.role.samples_button.core.model.Group
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -59,14 +61,17 @@ fun SoundBoardScreen(
     onNavigateToOnboarding: () -> Unit = {}
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
-    val hasSeenOnboarding by viewModel.hasSeenOnboarding.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showTopMenu by remember { mutableStateOf(false) }
 
-    LaunchedEffect(hasSeenOnboarding) {
-        if (hasSeenOnboarding == false) {
-            onNavigateToOnboarding()
-        }
+    // Navega al onboarding solo la primera vez (consume un único false y termina).
+    // Usar viewModel como key garantiza que este efecto no se relanza si el composable
+    // se recompone, evitando la race condition entre popBackStack y la propagación del StateFlow.
+    LaunchedEffect(viewModel) {
+        viewModel.hasSeenOnboarding
+            .filterNotNull()
+            .first { !it }
+        onNavigateToOnboarding()
     }
 
     Scaffold(

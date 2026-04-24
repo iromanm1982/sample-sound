@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
@@ -18,7 +20,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -59,20 +65,25 @@ private val pages = listOf(
 fun OnboardingScreen(
     isFirstRun: Boolean,
     onFinish: () -> Unit,
-    onMarkSeen: () -> Unit
+    onMarkSeen: suspend () -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
+    var isFinishing by remember { mutableStateOf(false) }
 
     fun finish() {
-        if (isFirstRun) onMarkSeen()
-        onFinish()
+        if (isFinishing) return
+        isFinishing = true
+        scope.launch {
+            if (isFirstRun) onMarkSeen()  // espera a que DataStore confirme la escritura
+            onFinish()
+        }
     }
 
-    BackHandler(enabled = isFirstRun) { finish() }
+    BackHandler(enabled = isFirstRun && !isFinishing) { finish() }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f)
@@ -83,11 +94,15 @@ fun OnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                TextButton(onClick = { finish() }) {
+                TextButton(
+                    onClick = { finish() },
+                    enabled = !isFinishing
+                ) {
                     Text("Omitir")
                 }
 
@@ -120,7 +135,8 @@ fun OnboardingScreen(
                                 pagerState.animateScrollToPage(pagerState.currentPage + 1)
                             }
                         }
-                    }
+                    },
+                    enabled = !isFinishing && !pagerState.isScrollInProgress
                 ) {
                     Text(
                         if (isLastPage) {
