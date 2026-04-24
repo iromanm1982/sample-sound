@@ -68,6 +68,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
     implementation(libs.hilt.android)
+    implementation(libs.androidx.datastore)
     ksp(libs.hilt.compiler)
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
