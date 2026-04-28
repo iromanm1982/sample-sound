@@ -1,10 +1,10 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "org.role.samples_button.core.database"
+    namespace = "org.role.audio_group.core.database"
     compileSdk = 36
 
     defaultConfig {
