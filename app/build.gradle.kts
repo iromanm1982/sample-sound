@@ -1,4 +1,4 @@
-import java.util.Properties
+﻿import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,7 +11,7 @@ val localProps = Properties().apply {
 }
 
 android {
-    namespace = "org.role.samples_button"
+    namespace = "org.role.audio_group"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "org.role.samples_button"
+        applicationId = "org.role.audio_group"
         minSdk = 30
         targetSdk = 36
         versionCode = 1

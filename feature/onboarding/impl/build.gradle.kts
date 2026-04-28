@@ -1,11 +1,11 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
 }
 
 android {
-    namespace = "org.role.samples_button.feature.onboarding.impl"
+    namespace = "org.role.audio_group.feature.onboarding.impl"
     compileSdk = 36
 
     defaultConfig {
