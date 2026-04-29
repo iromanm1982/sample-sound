@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1024px;
+    height: 500px;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .canvas {
+    width: 1024px;
+    height: 500px;
+    background: linear-gradient(135deg, #0d0d1a 0%, #12122a 50%, #0a1628 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Glow de fondo */
+  .glow-left {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(108, 92, 231, 0.18) 0%, transparent 70%);
+    top: -100px;
+    left: -100px;
+  }
+  .glow-right {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 184, 212, 0.12) 0%, transparent 70%);
+    bottom: -80px;
+    right: 200px;
+  }
+
+  /* Texto izquierda */
+  .left {
+    position: relative;
+    z-index: 2;
+    padding-left: 72px;
+    flex: 1;
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(108, 92, 231, 0.25);
+    border: 1px solid rgba(108, 92, 231, 0.5);
+    color: #a29bfe;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: 72px;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    letter-spacing: -1.5px;
+    margin-bottom: 16px;
+  }
+
+  h1 span {
+    background: linear-gradient(90deg, #a29bfe, #74b9ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-size: 20px;
+    color: rgba(255,255,255,0.55);
+    font-weight: 400;
+    max-width: 360px;
+    line-height: 1.5;
+  }
+
+  /* Panel de botones derecha */
+  .right {
+    position: relative;
+    z-index: 2;
+    padding-right: 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .button-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn {
+    width: 88px;
+    height: 88px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .btn .icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .btn.v1  { background: linear-gradient(145deg, #6c5ce7, #5541d7); box-shadow: 0 4px 20px rgba(108,92,231,0.4); }
+  .btn.v2  { background: linear-gradient(145deg, #00b4d8, #0096c7); box-shadow: 0 4px 20px rgba(0,180,216,0.35); }
+  .btn.v3  { background: linear-gradient(145deg, #fd79a8, #e84393); box-shadow: 0 4px 20px rgba(253,121,168,0.35); }
+  .btn.v4  { background: linear-gradient(145deg, #00cec9, #00a8a3); box-shadow: 0 4px 20px rgba(0,206,201,0.35); }
+  .btn.v5  { background: linear-gradient(145deg, #fdcb6e, #e8a020); box-shadow: 0 4px 20px rgba(253,203,110,0.35); }
+  .btn.v6  { background: rgba(255,255,255,0.07); }
+  .btn.v7  { background: linear-gradient(145deg, #a29bfe, #6c5ce7); box-shadow: 0 4px 20px rgba(162,155,254,0.35); }
+  .btn.v8  { background: linear-gradient(145deg, #55efc4, #00b894); box-shadow: 0 4px 20px rgba(85,239,196,0.35); }
+  .btn.v9  { background: rgba(255,255,255,0.07); }
+  .btn.v10 { background: linear-gradient(145deg, #e17055, #d44000); box-shadow: 0 4px 20px rgba(225,112,85,0.35); }
+  .btn.v11 { background: linear-gradient(145deg, #74b9ff, #0984e3); box-shadow: 0 4px 20px rgba(116,185,255,0.35); }
+  .btn.v12 { background: linear-gradient(145deg, #fd79a8, #c0005a); box-shadow: 0 4px 20px rgba(253,121,168,0.3); }
+
+  /* Fade lateral izquierdo del panel */
+  .panel-fade {
+    position: absolute;
+    left: 460px;
+    top: 0;
+    width: 80px;
+    height: 100%;
+    background: linear-gradient(90deg, #0d0d1a, transparent);
+    z-index: 3;
+  }
+
+  /* Línea decorativa */
+  .divider {
+    position: absolute;
+    left: 520px;
+    top: 40px;
+    bottom: 40px;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(108,92,231,0.4), transparent);
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="glow-left"></div>
+  <div class="glow-right"></div>
+  <div class="panel-fade"></div>
+  <div class="divider"></div>
+
+  <div class="left">
+    <div class="tag">Soundboard</div>
+    <h1>Audio<span>Group</span></h1>
+    <p class="subtitle">Tu panel de sonidos.<br>Toca, agrupa y reproduce.</p>
+  </div>
+
+  <div class="right">
+    <div class="button-row">
+      <div class="btn v1"><span class="icon">🥁</span>Kick</div>
+      <div class="btn v2"><span class="icon">🔔</span>Hi-Hat</div>
+      <div class="btn v3"><span class="icon">🎵</span>Snare</div>
+      <div class="btn v4"><span class="icon">🎹</span>Bass</div>
+    </div>
+    <div class="button-row">
+      <div class="btn v5"><span class="icon">🎸</span>Riff</div>
+      <div class="btn v6"><span class="icon">➕</span></div>
+      <div class="btn v7"><span class="icon">🎶</span>Pad</div>
+      <div class="btn v8"><span class="icon">🌊</span>FX</div>
+    </div>
+    <div class="button-row">
+      <div class="btn v9"><span class="icon">➕</span></div>
+      <div class="btn v10"><span class="icon">🔥</span>Drop</div>
+      <div class="btn v11"><span class="icon">🎺</span>Stab</div>
+      <div class="btn v12"><span class="icon">💫</span>Sweep</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
